@@ -1,0 +1,11 @@
+{
+  "name": "Continuité — Coiffure & Maquillage Cinéma",
+  "short_name": "Continuité",
+  "description": "Outil local de continuité coiffure et maquillage pour le cinéma.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101112",
+  "theme_color": "#101112"
+}
