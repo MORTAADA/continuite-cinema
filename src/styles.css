@@ -17,3 +17,19 @@
 
 /* Capture de photos directement depuis la caméra */
 .camera-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.camera-actions>span,.camera-footer>span{font-size:11px;color:#a3a49d}.captured-list{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #454033;border-radius:7px;background:#211f1a;color:#d9c6a4;font-size:11px}.text-button{border:0;background:transparent;color:var(--accent-light);font:inherit;cursor:pointer}.camera-backdrop{z-index:100}.camera-modal{width:min(100%,820px);max-height:94vh;overflow:auto;padding:20px;border:1px solid #3a3832;border-radius:13px;background:#191a1b;box-shadow:0 25px 90px #0009}.camera-preview{display:grid;place-items:center;min-height:240px;max-height:65vh;overflow:hidden;border-radius:9px;background:#080909;border:1px solid #303232}.camera-preview video{display:block;width:100%;max-height:65vh;object-fit:contain}.camera-fallback{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;text-align:center;color:#c8c7c1}.camera-fallback p{margin:0;max-width:480px;line-height:1.6}.camera-fallback small{color:#92938d;line-height:1.6}.camera-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:16px}.camera-footer>span{margin-right:auto}@media(max-width:620px){.camera-modal{padding:14px}.camera-footer{justify-content:stretch}.camera-footer button{flex:1}.camera-footer>span{width:100%;margin:0}}
+
+/* Accueil — accès rapide Films / Caméra / Images */
+.quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:-8px 0 26px}
+.quick-action{display:flex;align-items:center;gap:12px;min-width:0;padding:14px;border:1px solid #2c2e2f;border-radius:10px;background:linear-gradient(145deg,#1a1c1d,#171819);color:var(--text);text-align:left;transition:.18s}
+.quick-action:hover{border-color:#5a4b37;background:#1d1e1e;transform:translateY(-1px)}
+.quick-action>span:nth-child(2){min-width:0;flex:1}
+.quick-action strong{display:block;font-size:11px;font-weight:600;margin-bottom:4px}
+.quick-action small{display:block;color:#858780;font-size:9px;line-height:1.45}
+.quick-action>svg{color:#777a75;flex:none}
+.quick-action-icon{width:39px;height:39px;display:grid;place-items:center;flex:none;border:1px solid #51432f;border-radius:10px;background:#29241d;color:var(--accent-light)}
+.record-card-clickable{cursor:pointer}
+.record-card-clickable:hover{border-color:#5a4b37;transform:translateY(-1px)}
+.record-card-clickable{transition:.18s}
+.toolbar-actions{display:flex;align-items:center;gap:8px}
+.compact-button{width:auto;white-space:nowrap;padding:10px 12px}
+@media(max-width:900px){.quick-actions{grid-template-columns:1fr}.quick-action{width:100%}}

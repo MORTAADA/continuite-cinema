@@ -4,9 +4,9 @@ import type { FilmRecord, CharacterRecord, SequenceRecord, PhotoRecord } from '.
 import { getDatabase } from './lib/db';
 import { deletePhoto, listPhotos, savePhoto } from './lib/photos';
 
-type Props = { query: string; onDataChanged: () => void };
+type Props = { query: string; onDataChanged: () => void; initialAction?: 'camera' | 'images' };
 
-export default function ContinuityWorkspace({ query, onDataChanged }: Props) {
+export default function ContinuityWorkspace({ query, onDataChanged, initialAction }: Props) {
   const [films, setFilms] = useState<FilmRecord[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [sequences, setSequences] = useState<SequenceRecord[]>([]);
@@ -31,6 +31,19 @@ export default function ContinuityWorkspace({ query, onDataChanged }: Props) {
     setSequenceId(current => s.some(item => item.id === current) ? current : (s[0]?.id ?? ''));
   };
   useEffect(() => { void refresh().catch(() => setError('Impossible de lire les données locales.')); }, []);
+
+  useEffect(() => {
+    if (initialAction === 'camera') {
+      if (sequences.length) {
+        setShowForm(true); setCameraError(''); setCameraOpen(true);
+      } else {
+        setShowForm(true);
+        setError('Créez d’abord une séquence pour pouvoir enregistrer une photo de continuité.');
+      }
+    } else if (initialAction === 'images') {
+      setShowForm(false);
+    }
+  }, [initialAction, sequences.length]);
 
   useEffect(() => {
     if (!cameraOpen) return;
