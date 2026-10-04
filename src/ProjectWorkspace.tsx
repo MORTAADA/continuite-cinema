@@ -58,9 +58,8 @@ export default function ProjectWorkspace({ section, query, onDataChanged }: Prop
   if (section === 'Continuité') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} />;
 
   if (section === 'Sauvegarde' || section === 'Paramètres') {
-    const content: { title: string; body: string; icon: typeof Camera } = section === 'Continuité'
-      ? { title: 'Références photo', body: 'La prochaine étape permettra d’ajouter plusieurs photos par séquence, avec date de prise de vue, détails coiffure, maquillage, accessoires et notes de plateau.', icon: Camera }
-      : section === 'Sauvegarde'
+    const content: { title: string; body: string; icon: typeof Camera } =
+      section === 'Sauvegarde'
         ? { title: 'Sauvegarde complète', body: 'L’export et la restauration d’un fichier unique contenant les données et les photos seront ajoutés après la gestion des projets.', icon: Archive }
         : { title: 'Paramètres', body: 'Les préférences locales et les options de sécurité seront finalisées dans une prochaine étape.', icon: Pencil };
     const Icon = content.icon;
