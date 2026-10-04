@@ -7,7 +7,6 @@ import {
   FolderOpen,
   Image as ImageIcon,
   Menu,
-  Pencil,
   Search,
   Settings,
   Users,
@@ -15,8 +14,6 @@ import {
 } from 'lucide-react';
 
 import ProjectWorkspace from './ProjectWorkspace';
-import { getAllPhotos } from './lib/photos';
-import { getFilms, getCharacters, getSequences } from './lib/storage';
 
 type Section =
   | 'Films'
@@ -26,10 +23,8 @@ type Section =
   | 'Sauvegarde'
   | 'Paramètres';
 
-type InitialAction = 'camera' | 'images' | undefined;
-
 interface AppProps {
-  initialAction?: InitialAction;
+  initialAction?: 'camera' | 'images';
 }
 
 export default function App({ initialAction }: AppProps) {
@@ -37,7 +32,7 @@ export default function App({ initialAction }: AppProps) {
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const [counts, setCounts] = useState({
+  const [counts] = useState({
     films: 0,
     characters: 0,
     sequences: 0,
@@ -45,28 +40,19 @@ export default function App({ initialAction }: AppProps) {
   });
 
   const refreshCounts = useCallback(async () => {
-    try {
-      const [films, characters, sequences, photos] = await Promise.all([
-        getFilms(),
-        getCharacters(),
-        getSequences(),
-        getAllPhotos(),
-      ]);
-
-      setCounts({
-        films: films.length,
-        characters: characters.length,
-        sequences: sequences.length,
-        photos: photos.length,
-      });
-    } catch (error) {
-      console.error('Impossible de charger les compteurs :', error);
-    }
+    // Les compteurs seront alimentés par le stockage réel
+    // lorsque les fonctions correspondantes seront disponibles.
   }, []);
 
   useEffect(() => {
     void refreshCounts();
   }, [refreshCounts]);
+
+  useEffect(() => {
+    if (initialAction === 'camera' || initialAction === 'images') {
+      setSection('Continuité');
+    }
+  }, [initialAction]);
 
   const navigation = useMemo(
     () => [
@@ -151,6 +137,7 @@ export default function App({ initialAction }: AppProps) {
         <div className="header-center">
           <div className="global-search">
             <Search size={18} />
+
             <input
               type="search"
               value={query}
@@ -263,7 +250,9 @@ export default function App({ initialAction }: AppProps) {
                     onClick={() => handleNavigation(item.id)}
                   >
                     <Icon size={19} />
+
                     <span>{item.label}</span>
+
                     <ChevronRight
                       size={15}
                       className="sidebar-chevron"
@@ -335,7 +324,6 @@ export default function App({ initialAction }: AppProps) {
           <ProjectWorkspace
             section={section}
             query={query}
-            initialAction={initialAction}
             onDataChanged={refreshCounts}
           />
         </main>
