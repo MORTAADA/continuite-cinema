@@ -1,25 +1,51 @@
-# Continuité Cinéma — rapport de contrôle technique
+# Rapport de contrôle — Continuité Cinéma
 
-## Audit effectué sur l’archive fournie
-- Archive ZIP extraite et structure React/TypeScript/Vite inspectée.
-- Vérification des flux principaux : films, personnages, séquences, continuité photo, caméra, recherche et stockage IndexedDB.
-- Vérification statique des boutons JSX : les boutons d’action utilisent un type explicite.
-- Analyse des incohérences entre l’interface et le comportement du code.
+## Version finale
 
-## Corrections appliquées
-1. **Compteurs de la barre latérale** : ils utilisent maintenant les vraies données IndexedDB au lieu de rester à `0`.
-2. **Boutons « Images » et « Caméra »** : ils transmettent désormais réellement l’action à l’espace Continuité.
-3. **Prise de vue** : une photo capturée depuis la caméra reste maintenant en attente dans le formulaire au lieu d’être enregistrée immédiatement comme photo indépendante. Elle peut donc recevoir la séquence, les informations de coiffure, de maquillage, les accessoires et les notes avant l’enregistrement final.
-4. **Téléchargement des photos** : le bouton de téléchargement était placé au même endroit que le bouton Supprimer ; il est maintenant positionné séparément.
-5. **Date de référence** : une date invalide est maintenant détectée proprement avant l’écriture dans IndexedDB.
-6. **Libellé hors ligne** : « Mode hors ligne actif » a été remplacé par « Stockage local actif », formulation plus exacte avant validation complète du service worker.
+Cette version rétablit une architecture cohérente entre React et CSS et ajoute les fonctions manquantes essentielles pour un usage de plateau.
 
-## Points restant à finaliser
-- La fonction « Sauvegarde » est encore une interface de préparation : export/restauration complète des données et photos à implémenter.
-- « Paramètres » reste à compléter.
-- Le PIN local présent dans le code n’est pas un chiffrement des données IndexedDB.
-- La synchronisation cloud/multi-appareils n’existe pas encore.
-- Les tests de caméra physique et le build de production n’ont pas pu être exécutés ici car l’installation npm a dépassé le délai disponible dans l’environnement de contrôle.
+### Navigation et interface
+- Page **Accueil** avec tableau de bord.
+- Sidebar complète : Accueil, Films, Personnages, Séquences, Continuité, Sauvegarde, Paramètres.
+- Header avec recherche globale, Images et Caméra.
+- Responsive desktop / tablette / mobile.
+- Le logo revient toujours à Accueil.
 
-## Conclusion
-La base est saine pour un prototype local, mais les corrections ci-dessus étaient importantes car plusieurs éléments de l’interface donnaient une impression de fonctionnalité alors que le comportement réel était incomplet. La prochaine priorité technique devrait être **Sauvegarde / Restauration**, puis **tests mobile caméra + PWA**, puis **optimisation des photos avec miniatures**.
+### Gestion des projets
+- Création / modification / suppression des films.
+- Création / modification / suppression des personnages.
+- Création / modification / suppression des séquences.
+- Relations Film → Personnage → Séquence.
+- Suppression en cascade des éléments et photos dépendants.
+
+### Continuité
+- Import de plusieurs images.
+- Capture caméra.
+- Changement caméra avant / arrière.
+- Association à une séquence.
+- Champs coiffure, maquillage, accessoires et notes.
+- Modification d'une référence existante.
+- Téléchargement de l'original.
+- Suppression.
+- Miniatures locales pour réduire la charge d'affichage.
+- Recherche dans les références.
+
+### Sauvegarde
+- Export JSON autonome contenant les données et les photos originales.
+- Restauration avec confirmation.
+- Comptage du contenu restauré.
+
+### Paramètres
+- Estimation du stockage utilisé / quota.
+- Demande de stockage persistant.
+- Réinitialisation complète des données locales avec confirmation.
+
+### PWA / hors ligne
+- Service Worker conservé.
+- Manifest conservé.
+- IndexedDB pour les données locales.
+
+## Validation
+- Transpilation TypeScript/TSX de tous les fichiers source : OK.
+- Contrôle des classes CSS utilisées par l'interface : OK (une classe décorative `continuity-form-card` reste sans règle spécifique).
+- Le build Vite n'a pas pu être exécuté dans l'environnement de travail car `node_modules` était incomplet et les téléchargements npm ont expiré. Le projet doit être vérifié avec `npm install && npm run build` sur la machine de développement avant publication.
