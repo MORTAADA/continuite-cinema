@@ -17,7 +17,9 @@ export async function savePhoto(input: {
   if (input.sequenceId && !sequence) throw new Error('La séquence sélectionnée n’existe plus.');
   if (!input.file.type.startsWith('image/')) throw new Error('Choisissez un fichier image.');
   if (input.file.size > 100 * 1024 * 1024) throw new Error('Chaque photo doit faire moins de 100 Mo.');
-  const capturedAt = input.capturedAt ? new Date(input.capturedAt).toISOString() : now();
+  const parsedDate = input.capturedAt ? new Date(input.capturedAt) : new Date();
+  if (Number.isNaN(parsedDate.getTime())) throw new Error('La date et l’heure de référence sont invalides.');
+  const capturedAt = parsedDate.toISOString();
   const photo: PhotoRecord = {
     id: makeId(), sequenceId: sequence?.id, characterId: sequence?.characterId, filmId: sequence?.filmId,
     capturedAt, imageBlob: input.file, hairDetails: input.hairDetails?.trim() ? { details: input.hairDetails.trim() } : undefined,
