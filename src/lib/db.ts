@@ -31,9 +31,9 @@ export interface SequenceRecord {
 
 export interface PhotoRecord {
   id: string;
-  sequenceId: string;
-  characterId: string;
-  filmId: string;
+  sequenceId?: string;
+  characterId?: string;
+  filmId?: string;
   capturedAt: string;
   imageBlob: Blob;
   thumbnailBlob?: Blob;
