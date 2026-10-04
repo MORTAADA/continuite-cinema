@@ -30,7 +30,7 @@ Vite affiche ensuite une adresse locale, généralement `http://localhost:5173`.
 ## Limites connues — à traiter dans les prochaines étapes
 - La compilation de production doit encore être vérifiée sur un ordinateur où les dépendances npm peuvent être installées.
 - L’adresse e-mail sert d’identifiant local : il n’y a pas encore de vérification réelle par e-mail.
-- L’ajout/capture de photos et les champs détaillés de coiffure, maquillage, accessoires et notes ne sont pas encore implémentés.
+- La capture/importation de photos et les champs détaillés de coiffure, maquillage, accessoires et notes sont implémentés.
 - L’export et la restauration d’une sauvegarde complète ne sont pas encore implémentés.
 - Le service worker doit être validé sur une version de production servie via HTTPS ou localhost.
 - Les données sont locales au navigateur et ne sont pas synchronisées entre appareils. Le code PIN verrouille l’interface, mais ne chiffre pas les données stockées.
@@ -38,7 +38,7 @@ Vite affiche ensuite une adresse locale, généralement `http://localhost:5173`.
 ## Données et prudence
 Les données de ce prototype sont conservées dans le navigateur utilisé. Ne l’utilisez pas encore comme unique archive d’un tournage : la sauvegarde complète n’est pas disponible.
 
-## Prise de vue intégrée (prototype phase 3)
+## Prise de vue intégrée
 
 Dans l’espace « Continuité », ouvrez « Ajouter des photos », puis « Prendre une photo ». Le navigateur demande l’autorisation d’accéder à la caméra et affiche un aperçu en direct. « Capturer » ajoute une image à la liste temporaire ; il est possible d’en capturer plusieurs, puis de les enregistrer avec la séquence et les informations de coiffure, maquillage, accessoires et notes. L’import depuis la galerie reste disponible.
 
