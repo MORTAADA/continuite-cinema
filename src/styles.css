@@ -33,3 +33,9 @@
 .toolbar-actions{display:flex;align-items:center;gap:8px}
 .compact-button{width:auto;white-space:nowrap;padding:10px 12px}
 @media(max-width:900px){.quick-actions{grid-template-columns:1fr}.quick-action{width:100%}}
+
+/* Accessibilité et commandes des photos */
+.photo-download{position:absolute;top:8px;right:44px;background:#111b;border:1px solid #ffffff25;color:#d7c19e}
+.photo-delete{z-index:2}
+.record-card-clickable{-webkit-tap-highlight-color:transparent}
+@media (hover:none){.record-card-clickable:hover{transform:none}}

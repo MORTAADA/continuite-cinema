@@ -4,9 +4,9 @@ import type { FilmRecord, CharacterRecord, SequenceRecord, PhotoRecord } from '.
 import { getDatabase } from './lib/db';
 import { deletePhoto, listPhotos, savePhoto } from './lib/photos';
 
-type Props = { query: string; onDataChanged: () => void; initialAction?: 'camera' | 'images' };
+type Props = { query: string; onDataChanged: () => void; initialAction?: 'camera' | 'images'; actionToken?: number };
 
-export default function ContinuityWorkspace({ query, onDataChanged, initialAction }: Props) {
+export default function ContinuityWorkspace({ query, onDataChanged, initialAction, actionToken }: Props) {
   const [films, setFilms] = useState<FilmRecord[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [sequences, setSequences] = useState<SequenceRecord[]>([]);
@@ -36,9 +36,9 @@ export default function ContinuityWorkspace({ query, onDataChanged, initialActio
     if (initialAction === 'camera') {
       setShowForm(true); setCameraError(''); setCameraOpen(true);
     } else if (initialAction === 'images') {
-      setShowForm(false);
+      setCameraOpen(false); setShowForm(false);
     }
-  }, [initialAction, sequences.length]);
+  }, [initialAction, actionToken, sequences.length]);
 
   useEffect(() => {
     if (!cameraOpen) return;
@@ -81,11 +81,10 @@ export default function ContinuityWorkspace({ query, onDataChanged, initialActio
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('La photo n’a pas pu être créée.')), 'image/png'));
       const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       const captured = new File([blob], `continuite-${stamp}.png`, { type: 'image/png', lastModified: Date.now() });
-      // Save the original-resolution capture immediately as a standalone photo.
-      await savePhoto({ file: captured, capturedAt: new Date().toISOString() });
-      await refresh();
-      onDataChanged();
-      setNotice('Photo enregistrée automatiquement dans Images, sans compression JPEG.');
+      // Garder la capture en attente permet de lui associer la séquence,
+      // la coiffure, le maquillage et les notes avant l’enregistrement final.
+      setCapturedFiles(current => [...current, captured]);
+      setNotice('Photo capturée. Elle sera enregistrée avec les informations de continuité.');
 
     } catch (e) { setCameraError(e instanceof Error ? e.message : 'La capture a échoué.'); }
     finally { setCameraBusy(false); }

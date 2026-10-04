@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import ProjectWorkspace from './ProjectWorkspace';
+import { getLocalCounts } from './lib/db';
 
 type Section =
   | 'Films'
@@ -27,12 +28,17 @@ interface AppProps {
   initialAction?: 'camera' | 'images';
 }
 
+type ContinuityAction = { type: 'camera' | 'images'; token: number } | undefined;
+
 export default function App({ initialAction }: AppProps) {
   const [section, setSection] = useState<Section>('Films');
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [continuityAction, setContinuityAction] = useState<ContinuityAction>(
+    initialAction ? { type: initialAction, token: 1 } : undefined
+  );
 
-  const [counts] = useState({
+  const [counts, setCounts] = useState({
     films: 0,
     characters: 0,
     sequences: 0,
@@ -40,8 +46,12 @@ export default function App({ initialAction }: AppProps) {
   });
 
   const refreshCounts = useCallback(async () => {
-    // Les compteurs seront alimentés par le stockage réel
-    // lorsque les fonctions correspondantes seront disponibles.
+    try {
+      setCounts(await getLocalCounts());
+    } catch {
+      // IndexedDB peut être temporairement indisponible (navigation privée,
+      // politique de stockage, etc.). Les compteurs restent alors à leur valeur précédente.
+    }
   }, []);
 
   useEffect(() => {
@@ -51,6 +61,7 @@ export default function App({ initialAction }: AppProps) {
   useEffect(() => {
     if (initialAction === 'camera' || initialAction === 'images') {
       setSection('Continuité');
+      setContinuityAction({ type: initialAction, token: Date.now() });
     }
   }, [initialAction]);
 
@@ -101,6 +112,14 @@ export default function App({ initialAction }: AppProps) {
     setSection(nextSection);
     setMenuOpen(false);
     setQuery('');
+    if (nextSection !== 'Continuité') setContinuityAction(undefined);
+  };
+
+  const openContinuity = (type: 'camera' | 'images') => {
+    setSection('Continuité');
+    setMenuOpen(false);
+    setQuery('');
+    setContinuityAction({ type, token: Date.now() });
   };
 
   return (
@@ -163,7 +182,7 @@ export default function App({ initialAction }: AppProps) {
           <button
             type="button"
             className="header-action"
-            onClick={() => handleNavigation('Continuité')}
+            onClick={() => openContinuity('images')}
           >
             <ImageIcon size={18} />
             <span>Images</span>
@@ -172,7 +191,7 @@ export default function App({ initialAction }: AppProps) {
           <button
             type="button"
             className="header-action primary"
-            onClick={() => handleNavigation('Continuité')}
+            onClick={() => openContinuity('camera')}
           >
             <Camera size={18} />
             <span>Caméra</span>
@@ -266,7 +285,7 @@ export default function App({ initialAction }: AppProps) {
           <div className="sidebar-footer">
             <div className="offline-status">
               <span className="offline-dot" />
-              <span>Mode hors ligne actif</span>
+              <span>Stockage local actif</span>
             </div>
           </div>
         </aside>
@@ -298,9 +317,7 @@ export default function App({ initialAction }: AppProps) {
                   <button
                     type="button"
                     className="secondary-button"
-                    onClick={() =>
-                      handleNavigation('Continuité')
-                    }
+                    onClick={() => openContinuity('images')}
                   >
                     <ImageIcon size={17} />
                     Images
@@ -309,9 +326,7 @@ export default function App({ initialAction }: AppProps) {
                   <button
                     type="button"
                     className="primary-button"
-                    onClick={() =>
-                      handleNavigation('Continuité')
-                    }
+                    onClick={() => openContinuity('camera')}
                   >
                     <Camera size={17} />
                     Ouvrir la caméra
@@ -325,6 +340,7 @@ export default function App({ initialAction }: AppProps) {
             section={section}
             query={query}
             onDataChanged={refreshCounts}
+            continuityAction={continuityAction}
           />
         </main>
       </div>

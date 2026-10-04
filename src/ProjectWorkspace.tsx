@@ -5,7 +5,7 @@ import { deleteCharacter, deleteFilm, deleteSequence, listCharacters, listFilms,
 import ContinuityWorkspace from './ContinuityWorkspace';
 
 type Section = 'Films' | 'Personnages' | 'Séquences' | 'Continuité' | 'Sauvegarde' | 'Paramètres';
-type ContinuityAction = 'camera' | 'images' | undefined;
+type ContinuityAction = { type: 'camera' | 'images'; token: number } | undefined;
 type Props = { section: Section; query: string; onDataChanged: () => void; continuityAction?: ContinuityAction };
 type Editor = { kind: 'film' | 'character' | 'sequence'; id?: string } | null;
 
@@ -63,7 +63,7 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
   const canCreate = section === 'Films' || (section === 'Personnages' && films.length > 0) || (section === 'Séquences' && characters.length > 0);
   const createLabel = section === 'Films' ? 'Nouveau film' : section === 'Personnages' ? 'Nouveau personnage' : 'Nouvelle séquence';
 
-  if (section === 'Continuité') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} initialAction={continuityAction} />;
+  if (section === 'Continuité') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} initialAction={continuityAction?.type} actionToken={continuityAction?.token} />;
 
   if (section === 'Sauvegarde' || section === 'Paramètres') {
     const content: { title: string; body: string; icon: typeof Camera } = section === 'Sauvegarde'
