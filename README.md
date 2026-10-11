@@ -37,3 +37,6 @@ Vite affiche une adresse locale, généralement `http://localhost:5173`.
 
 ## Sécurité et données
 Le code PIN verrouille l’interface, mais ne chiffre pas les données IndexedDB. N’utilisez pas cette version comme unique archive d’un tournage tant que les essais de sauvegarde/restauration et la validation sur les appareils de production ne sont pas terminés.
+
+### Séquences partagées sur téléphone
+Lors de la création ou de la modification d’une séquence, sélectionnez les personnages associés en touchant leurs cases à cocher. Les photos appartiennent à la séquence et restent identiques lorsqu’on ouvre cette séquence depuis l’un ou l’autre personnage.

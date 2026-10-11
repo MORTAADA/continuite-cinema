@@ -28,3 +28,9 @@
 
 ## Recommandation avant livraison client
 Installer les dépendances sur une machine avec accès au registre npm, exécuter `npm ci` puis `npm run build`, tester la migration sur une copie de la base version 1, et réaliser les tests d’acceptation sur les téléphones réellement utilisés au tournage. Conserver une copie de sauvegarde avant toute mise à jour de l’application.
+
+## Étape suivante — amélioration mobile
+- Remplacement du contrôle HTML `select multiple` des personnages par une liste de cases à cocher tactiles. L’ancien contrôle nécessitait Ctrl/Cmd sur ordinateur, ce qui rendait la sélection de personnages partagés peu évidente sur téléphone.
+- Le formulaire continue d’envoyer les identifiants cochés sous le champ `characterIds`; aucune modification du schéma IndexedDB n’est requise pour cette amélioration.
+- Nouvelle vérification syntaxique après ce changement : 10 fichiers TypeScript/TSX analysés, aucune erreur de syntaxe; 68 boutons JSX vérifiés, aucun sans `type` explicite.
+- Renforcement de la validation de restauration : vérification que les identifiants de personnages d’une séquence sont uniques et cohérents avec son personnage principal, et que chaque photo référence un personnage réellement lié à sa séquence. Les incohérences sont rejetées avant le remplacement de la base locale.
