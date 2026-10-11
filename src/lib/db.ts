@@ -1,16 +1,16 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 
 export interface FilmRecord {
-  id: string; title: string; description?: string; createdAt: string; updatedAt: string;
+  id: string; title: string; description?: string; imageDataUrl?: string; createdAt: string; updatedAt: string;
   archivedAt?: string;
 }
 export interface CharacterRecord {
-  id: string; filmId: string; name: string; actorName?: string; notes?: string;
+  id: string; filmId: string; name: string; actorName?: string; notes?: string; imageDataUrl?: string;
   createdAt: string; updatedAt: string; archivedAt?: string; archivedByFilmId?: string;
 }
 export interface SequenceRecord {
   id: string; characterId: string; characterIds?: string[]; filmId: string; name: string;
-  sequenceNumber?: string; description?: string; createdAt: string; updatedAt: string; archivedAt?: string; archivedByFilmId?: string;
+  sequenceNumber?: string; description?: string; imageDataUrl?: string; createdAt: string; updatedAt: string; archivedAt?: string; archivedByFilmId?: string;
 }
 export interface PhotoRecord {
   id: string; sequenceId: string; characterId: string; filmId: string; capturedAt: string;
@@ -45,7 +45,7 @@ export function getDatabase() {
           const sequences = tx.objectStore('sequences');
           sequences.createIndex('by-characters', 'characterIds', { multiEntry: true });
           // Preserve every existing sequence and migrate its single-character relationship.
-          void sequences.openCursor().then(function migrate(cursor): Promise<unknown> | undefined {
+          void sequences.openCursor().then(function migrate(cursor) {
             if (!cursor) return;
             const value = cursor.value as SequenceRecord;
             if (!Array.isArray(value.characterIds) || value.characterIds.length === 0) {
