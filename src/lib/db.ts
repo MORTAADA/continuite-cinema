@@ -45,7 +45,7 @@ export function getDatabase() {
           const sequences = tx.objectStore('sequences');
           sequences.createIndex('by-characters', 'characterIds', { multiEntry: true });
           // Preserve every existing sequence and migrate its single-character relationship.
-          void sequences.openCursor().then(function migrate(cursor) {
+          void sequences.openCursor().then(function migrate(cursor): Promise<void> | void {
             if (!cursor) return;
             const value = cursor.value as SequenceRecord;
             if (!Array.isArray(value.characterIds) || value.characterIds.length === 0) {
