@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { Archive, ArrowLeft, Camera, Clapperboard, Film, Pencil, Plus, Search, Trash2, Users, X, RotateCcw } from 'lucide-react';
+import { Archive, ArrowLeft, Clapperboard, Film, Pencil, Plus, Search, Trash2, Users, X, RotateCcw } from 'lucide-react';
 import type { FilmRecord, CharacterRecord, SequenceRecord } from './lib/db';
 import { getSetting, setSetting } from './lib/db';
 import { archiveCharacter, archiveFilm, archiveSequence, deleteCharacter, deleteFilm, deleteSequence, listCharacters, listFilms, listSequences, restoreCharacter, restoreFilm, restoreSequence, saveCharacter, saveFilm, saveSequence } from './lib/projects';
