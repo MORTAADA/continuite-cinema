@@ -44,11 +44,13 @@ export async function restoreBackup(file: File): Promise<{ films: number; charac
   if (films.some(x => !x?.id || !x.title) || characters.some(x => !x?.id || !filmById.has(x.filmId))) throw new Error('La sauvegarde contient des films ou personnages invalides. Les données actuelles n’ont pas été modifiées.');
   for (const sequence of sequences) {
     const linked = sequence.characterIds?.length ? sequence.characterIds : [sequence.characterId];
-    if (!sequence?.id || !filmById.has(sequence.filmId) || !linked.length || linked.some(cid => characterById.get(cid)?.filmId !== sequence.filmId)) throw new Error('Une séquence contient des relations invalides. Les données actuelles n’ont pas été modifiées.');
+    if (!sequence?.id || !filmById.has(sequence.filmId) || !linked.length || new Set(linked).size !== linked.length || !linked.includes(sequence.characterId) || linked.some(cid => characterById.get(cid)?.filmId !== sequence.filmId)) throw new Error('Une séquence contient des relations invalides. Les données actuelles n’ont pas été modifiées.');
   }
   let offset = 12 + manifestSize; const photos: PhotoRecord[] = [];
   for (const item of photoManifest) {
-    if (!item?.record?.id || !sequenceById.has(item.record.sequenceId) || !filmById.has(item.record.filmId) || sequenceById.get(item.record.sequenceId)?.filmId !== item.record.filmId || characterById.get(item.record.characterId)?.filmId !== item.record.filmId || !Number.isSafeInteger(item.imageSize) || item.imageSize <= 0 || !Number.isSafeInteger(item.thumbnailSize) || item.thumbnailSize < 0) throw new Error('Une image ou une relation de la sauvegarde est invalide. Les données actuelles n’ont pas été modifiées.');
+    const parentSequence = item?.record ? sequenceById.get(item.record.sequenceId) : undefined;
+    const linkedCharacterIds = parentSequence?.characterIds?.length ? parentSequence.characterIds : parentSequence ? [parentSequence.characterId] : [];
+    if (!item?.record?.id || !parentSequence || !filmById.has(item.record.filmId) || parentSequence.filmId !== item.record.filmId || characterById.get(item.record.characterId)?.filmId !== item.record.filmId || !linkedCharacterIds.includes(item.record.characterId) || !Number.isSafeInteger(item.imageSize) || item.imageSize <= 0 || !Number.isSafeInteger(item.thumbnailSize) || item.thumbnailSize < 0) throw new Error('Une image ou une relation de la sauvegarde est invalide. Les données actuelles n’ont pas été modifiées.');
     const endImage = offset + item.imageSize; const endThumbnail = endImage + item.thumbnailSize;
     if (endThumbnail > file.size) throw new Error('Le fichier de sauvegarde est incomplet. Les données actuelles n’ont pas été modifiées.');
     const imageBlob = file.slice(offset, endImage, item.imageType); const thumbnailBlob = item.thumbnailSize ? file.slice(endImage, endThumbnail, item.thumbnailType) : undefined;
