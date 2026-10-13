@@ -34,3 +34,20 @@ Installer les dépendances sur une machine avec accès au registre npm, exécute
 - Le formulaire continue d’envoyer les identifiants cochés sous le champ `characterIds`; aucune modification du schéma IndexedDB n’est requise pour cette amélioration.
 - Nouvelle vérification syntaxique après ce changement : 10 fichiers TypeScript/TSX analysés, aucune erreur de syntaxe; 68 boutons JSX vérifiés, aucun sans `type` explicite.
 - Renforcement de la validation de restauration : vérification que les identifiants de personnages d’une séquence sont uniques et cohérents avec son personnage principal, et que chaque photo référence un personnage réellement lié à sa séquence. Les incohérences sont rejetées avant le remplacement de la base locale.
+
+
+## Révision 0.3.0 — Option A : aperçu plein écran, enregistrement automatique, « Mes photos »
+### Changements
+- Nouveau composant `src/PhotoViewer.tsx` : aperçu plein écran (retour, suppression, détails, rattachement film → personnage → séquence), enregistrement automatique avec écritures sérialisées et dernier enregistrement à la fermeture/changement de photo.
+- Caméra : disposition miniature de la dernière photo | grand déclencheur | changer de caméra / flash / fermer. Le flux vidéo reste actif pendant l’aperçu : retour à la caméra sans la rouvrir. Ancien aperçu « incrusté » et ancienne bande de miniatures supprimés.
+- Correction : l’ancien bouton « Détails » ouvert depuis la caméra affichait une fenêtre derrière la caméra (z-index inférieur) ; remplacé par le panneau intégré à l’aperçu.
+- `savePhoto` retourne la photo créée ; `updatePhoto` accepte `sequenceId`/`characterId` (validation : séquence active, personnage lié, `filmId` recalculé) et retourne la photo mise à jour. L’image n’est jamais modifiée. Le format de sauvegarde `.ccbackup` et le schéma IndexedDB sont inchangés.
+- Section « Continuité » renommée « Mes photos », avec filtres film / personnage / séquence ; cartes cliquables.
+- Capture : mise à jour de l’état en place (plus de rechargement complet de toutes les images à chaque photo).
+
+### Tests réalisés (navigateur Chromium réel, caméra simulée, viewports 390×800 et 1280×800)
+Création film/personnages/séquences ; 3 prises de vue ; compteur ; aperçu plein écran (390×740) ; notes et coiffure enregistrées en IndexedDB ; blobs JPEG conservés ; reclassement vers une autre séquence ; cohérence des listes ; retour à la caméra avec flux toujours « live » ; nouvelle prise ; suppression depuis l’aperçu ; touche Échap ; page Mes photos et filtre par séquence : tous réussis, aucune erreur JS.
+
+### Limites — à refaire sur votre machine
+- `npm ci` était bloqué dans cet environnement (registre npm refusé par la politique réseau). Les tests ont utilisé esbuild + React 19 avec de petites doublures pour `idb` et `lucide-react`. Le projet cible React 18.3 : exécutez `npm ci && npm run build` pour la validation TypeScript complète (une vérification approchée a confirmé l’absence de variables inutilisées/indéfinies).
+- Caméra physique Android/iOS, flash, PWA hors ligne et grandes photothèques non testés.

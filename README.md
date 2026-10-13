@@ -19,7 +19,9 @@ Vite affiche une adresse locale, généralement `http://localhost:5173`.
 - Films, personnages, séquences et photos stockés dans IndexedDB sur l’appareil.
 - Navigation hiérarchique : film → personnage → séquence → photos et caméra.
 - Une séquence peut être liée à plusieurs personnages du même film. Les photos sont attachées à la séquence et ne sont pas dupliquées pour chaque personnage.
-- Caméra accessible depuis la page d’une séquence existante. L’utilisateur peut vérifier la capture, la reprendre, l’annuler ou enregistrer immédiatement l’image. La capture vidéo est exportée en PNG sans compression JPEG supplémentaire; la qualité/résolution dépend toutefois du flux caméra fourni par le navigateur.
+- Caméra continue depuis la page d’une séquence : aperçu en direct, grand bouton de prise de vue, miniature de la dernière photo avec compteur. Chaque photo est enregistrée immédiatement dans IndexedDB (JPEG qualité 0,98 à la résolution du flux fourni par le navigateur) et la caméra reste ouverte pour enchaîner les prises.
+- Aperçu plein écran (touche sur la miniature ou sur une photo) : boutons Retour (vers la caméra ou la liste), Supprimer et Détails. Le panneau Détails permet de lier la photo à un autre film, personnage ou séquence, et de modifier date, coiffure, maquillage, accessoires et notes. Ordre d’enregistrement : l’image d’abord, puis les modifications, enregistrées automatiquement (≈ 0,7 s après la dernière frappe, et à la fermeture). Navigation entre photos par flèches, glissement ou clavier (← → Échap).
+- Page « Mes photos » : toutes les photos, filtres film / personnage / séquence, recherche, archivage/restauration et ouverture en plein écran.
 - Import de photos depuis la galerie, en conservant le Blob fourni par le navigateur.
 - Notes, date de référence, coiffure, maquillage et accessoires modifiables après l’enregistrement de la photo.
 - Archivage et restauration des films, personnages, séquences et photos; suppression définitive séparée et confirmée.
