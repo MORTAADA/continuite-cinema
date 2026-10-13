@@ -6,7 +6,7 @@ import { archiveCharacter, archiveFilm, archiveSequence, deleteCharacter, delete
 import BackupWorkspace from './BackupWorkspace';
 import ContinuityWorkspace from './ContinuityWorkspace';
 
-type Section = 'Films' | 'Personnages' | 'Séquences' | 'Continuité' | 'Sauvegarde' | 'Paramètres';
+type Section = 'Films' | 'Personnages' | 'Séquences' | 'Mes photos' | 'Sauvegarde' | 'Paramètres';
 type ContinuityAction = 'camera' | 'images' | undefined;
 type Props = { section: Section; query: string; onDataChanged: () => void; continuityAction?: ContinuityAction };
 type Editor = { kind: 'film' | 'character' | 'sequence'; id?: string } | null;
@@ -80,7 +80,7 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
   const createLabel = createKind === 'film' ? 'Nouveau film' : createKind === 'character' ? 'Nouveau personnage' : 'Nouvelle séquence';
 
   if (section === 'Films' && activeSequenceId) return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} fixedSequenceId={activeSequenceId} onBack={() => setActiveSequenceId(null)} />;
-  if (section === 'Continuité') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} initialAction={continuityAction} />;
+  if (section === 'Mes photos') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} initialAction={continuityAction} />;
   if (section === 'Sauvegarde') return <BackupWorkspace onDataChanged={onDataChanged} />;
 
   if (section === 'Paramètres') return <ImageSettings />;
