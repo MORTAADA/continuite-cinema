@@ -11,7 +11,7 @@ export async function listPhotos(includeArchived = true): Promise<PhotoRecord[]>
 export async function savePhoto(input: {
   sequenceId: string; file: Blob; capturedAt?: string; hairDetails?: string;
   makeupDetails?: string; accessories?: string; notes?: string;
-}): Promise<void> {
+}): Promise<PhotoRecord> {
   const db = await getDatabase();
   const sequence = await db.get('sequences', input.sequenceId);
   if (!sequence || sequence.archivedAt) throw new Error('Sélectionnez une séquence active existante.');
@@ -25,6 +25,7 @@ export async function savePhoto(input: {
     accessories: input.accessories?.trim() || undefined, notes: input.notes?.trim() || undefined, createdAt: now(),
   };
   await db.put('photos', photo);
+  return photo;
 }
 
 export async function deletePhoto(photoId: string): Promise<void> {
@@ -32,11 +33,34 @@ export async function deletePhoto(photoId: string): Promise<void> {
   await db.delete('photos', photoId);
 }
 
-export async function updatePhoto(photoId: string, input: { capturedAt?: string; hairDetails?: string; makeupDetails?: string; accessories?: string; notes?: string }): Promise<void> {
+export type PhotoUpdate = {
+  capturedAt?: string; hairDetails?: string; makeupDetails?: string; accessories?: string; notes?: string;
+  /** Reclassement : séquence cible et personnage (doit être lié à cette séquence). */
+  sequenceId?: string; characterId?: string;
+};
+
+/** Met à jour les notes et, si demandé, rattache la photo à une autre séquence/personnage. L'image n'est jamais modifiée. */
+export async function updatePhoto(photoId: string, input: PhotoUpdate): Promise<PhotoRecord> {
   const db = await getDatabase(); const photo = await db.get('photos', photoId);
   if (!photo) throw new Error('Photo introuvable.');
   const capturedAt = input.capturedAt ? new Date(input.capturedAt).toISOString() : photo.capturedAt;
-  await db.put('photos', { ...photo, capturedAt, hairDetails: input.hairDetails?.trim() ? { details: input.hairDetails.trim() } : undefined, makeupDetails: input.makeupDetails?.trim() ? { details: input.makeupDetails.trim() } : undefined, accessories: input.accessories?.trim() || undefined, notes: input.notes?.trim() || undefined });
+  let { sequenceId, characterId, filmId } = photo;
+  if (input.sequenceId && (input.sequenceId !== photo.sequenceId || (input.characterId && input.characterId !== photo.characterId))) {
+    const sequence = await db.get('sequences', input.sequenceId);
+    if (!sequence || sequence.archivedAt) throw new Error('Choisissez une séquence active existante.');
+    const linked = sequence.characterIds?.length ? sequence.characterIds : [sequence.characterId];
+    const wanted = input.characterId ?? (linked.includes(photo.characterId) ? photo.characterId : sequence.characterId);
+    if (!linked.includes(wanted)) throw new Error('Ce personnage n’est pas associé à cette séquence.');
+    sequenceId = sequence.id; characterId = wanted; filmId = sequence.filmId;
+  }
+  const updated: PhotoRecord = {
+    ...photo, capturedAt, sequenceId, characterId, filmId,
+    hairDetails: input.hairDetails?.trim() ? { details: input.hairDetails.trim() } : undefined,
+    makeupDetails: input.makeupDetails?.trim() ? { details: input.makeupDetails.trim() } : undefined,
+    accessories: input.accessories?.trim() || undefined, notes: input.notes?.trim() || undefined,
+  };
+  await db.put('photos', updated);
+  return updated;
 }
 
 export async function archivePhoto(photoId: string): Promise<void> {
