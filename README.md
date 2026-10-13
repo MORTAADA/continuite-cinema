@@ -42,3 +42,11 @@ Le code PIN verrouille l’interface, mais ne chiffre pas les données IndexedDB
 
 ### Séquences partagées sur téléphone
 Lors de la création ou de la modification d’une séquence, sélectionnez les personnages associés en touchant leurs cases à cocher. Les photos appartiennent à la séquence et restent identiques lorsqu’on ouvre cette séquence depuis l’un ou l’autre personnage.
+
+## Installer sur le téléphone (application PWA)
+L’application est une PWA : une fois publiée en **HTTPS**, elle s’installe comme une vraie application (icône, plein écran, hors ligne, caméra).
+1. Publiez : poussez le dépôt sur GitHub (branche `main`), puis *Settings → Pages → Source : GitHub Actions*. Le workflow `.github/workflows/deploy.yml` construit et publie sur `https://<utilisateur>.github.io/continuite-cinema/` (le nom du dépôt doit être `continuite-cinema`, sinon changez `base` dans `vite.config.ts`).
+2. Android (Chrome) : ouvrez l’adresse → menu ⋮ → **Installer l’application** / **Ajouter à l’écran d’accueil**.
+3. iPhone (Safari) : ouvrez l’adresse → bouton Partager → **Sur l’écran d’accueil**.
+4. Ouvrez l’application une fois avec Internet, puis elle fonctionne hors ligne. Autorisez la caméra à la première prise de vue.
+Les données restent dans le téléphone : exportez régulièrement une sauvegarde `.ccbackup`.
