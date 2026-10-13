@@ -1,4 +1,4 @@
-const CACHE_NAME = 'continuite-cinema-shell-v3';
+const CACHE_NAME = 'continuite-cinema-shell-v4';
 const BASE_URL = new URL('./', self.registration.scope);
 const APP_SHELL = [BASE_URL.href];
 
