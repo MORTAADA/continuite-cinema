@@ -1,22 +1,32 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  Aperture, Archive, Camera, Check, ChevronRight, CircleHelp, Clapperboard,
-  CloudOff, Database, Film, FolderOpen, LockKeyhole, Menu, Plus,
-  Search, Settings, ShieldCheck, Sparkles, Users, X, Image,
+  Aperture, Archive, Camera, ChevronRight, CircleHelp, Clapperboard, CloudOff, Film, Image,
+  LockKeyhole, MoreHorizontal, Search, Settings, ShieldCheck, Users, X, Home as HomeIcon,
 } from 'lucide-react';
 import { getLocalCounts } from './lib/db';
+import { getResumeSequence } from './lib/resume';
+import { backfillThumbnails } from './lib/photos';
+import Home from './Home';
 import ProjectWorkspace from './ProjectWorkspace';
 import { createLocalProfile, getProfileEmail, hasLocalProfile, verifyPin } from './lib/lock';
 
-type Section = 'Accueil' | 'Films' | 'Personnages' | 'Séquences' | 'Mes photos' | 'Sauvegarde' | 'Paramètres';
-const navItems: { label: Section; icon: typeof Film; detail: string }[] = [
-  { label: 'Accueil', icon: Aperture, detail: 'Vue d’ensemble de votre espace de travail' },
-  { label: 'Films', icon: Clapperboard, detail: 'Tous vos projets cinéma' },
-  { label: 'Personnages', icon: Users, detail: 'Fiches personnages et acteurs' },
-  { label: 'Séquences', icon: Film, detail: 'Scènes et séquences de tournage' },
-  { label: 'Mes photos', icon: Camera, detail: 'Gérez, classez et relisez vos photos de continuité' },
-  { label: 'Sauvegarde', icon: Archive, detail: 'Exporter et restaurer vos données' },
-  { label: 'Paramètres', icon: Settings, detail: 'Préférences et sécurité locale' },
+type Section = 'Accueil' | 'Projets' | 'Mes photos' | 'Sauvegarde' | 'Paramètres' | 'Personnages' | 'Séquences';
+type Launch = { sequenceId: string; nonce: number } | null;
+const sectionInfo: Record<Section, { title: string; detail: string }> = {
+  Accueil: { title: 'Accueil', detail: '' },
+  Projets: { title: 'Projets', detail: 'Films, personnages et séquences' },
+  'Mes photos': { title: 'Mes photos', detail: 'Gérez, classez et relisez vos photos de continuité' },
+  Sauvegarde: { title: 'Sauvegarde', detail: 'Exporter et restaurer vos données' },
+  Paramètres: { title: 'Paramètres', detail: 'Images des catégories' },
+  Personnages: { title: 'Tous les personnages', detail: 'Liste complète, archives comprises' },
+  Séquences: { title: 'Toutes les séquences', detail: 'Liste complète, archives comprises' },
+};
+const mainNav: { label: Section; icon: typeof Film }[] = [
+  { label: 'Accueil', icon: HomeIcon }, { label: 'Projets', icon: Clapperboard }, { label: 'Mes photos', icon: Image },
+];
+const moreNav: { label: Section; icon: typeof Film }[] = [
+  { label: 'Sauvegarde', icon: Archive }, { label: 'Paramètres', icon: Settings },
+  { label: 'Personnages', icon: Users }, { label: 'Séquences', icon: Film },
 ];
 
 function Brand() {
@@ -50,31 +60,63 @@ function LockScreen({ email, onUnlock }: { email: string; onUnlock: () => void }
 function AppShell({ email, onLock }: { email: string; onLock: () => void }) {
   const [section, setSection] = useState<Section>('Accueil');
   const [query, setQuery] = useState('');
-  const [mobileNav, setMobileNav] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [continuityAction, setContinuityAction] = useState<'camera' | 'images' | undefined>(undefined);
+  const [launch, setLaunch] = useState<Launch>(null);
   const [counts, setCounts] = useState({ films: 0, characters: 0, sequences: 0, photos: 0 });
+  const [homeKey, setHomeKey] = useState(0);
+  const [photoToOpen, setPhotoToOpen] = useState<{ id: string; nonce: number } | null>(null);
   const refreshCounts = () => { getLocalCounts().then(setCounts).catch(() => undefined); };
-  useEffect(() => { refreshCounts(); }, []);
-  const current = navItems.find(n => n.label === section)!;
-  const openSection = (next: Section, action?: 'camera' | 'images') => {
-    setContinuityAction(action);
+  useEffect(() => {
+    refreshCounts();
+    // Protection : demande un stockage persistant (silencieux) et complète les miniatures des anciennes photos.
+    try { void navigator.storage?.persist?.(); } catch { /* non bloquant */ }
+    const timer = window.setTimeout(() => { void backfillThumbnails().then(n => { if (n) refreshCounts(); }).catch(() => undefined); }, 2500);
+    return () => window.clearTimeout(timer);
+  }, []);
+  const openSection = (next: Section) => {
+    setLaunch(null); setPhotoToOpen(null); setMoreOpen(false); setQuery('');
+    if (next === 'Accueil') setHomeKey(k => k + 1);
     setSection(next);
-    setMobileNav(false);
   };
-  return <div className="app-shell"><aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}><div className="sidebar-top"><Brand/><button type="button" className="icon-button mobile-close" aria-label="Fermer le menu" onClick={() => setMobileNav(false)}><X size={18}/></button></div><div className="workspace-label">ESPACE DE TRAVAIL</div><nav className="main-nav">{navItems.map(item => { const Icon = item.icon; return <button type="button" key={item.label} className={`nav-item ${section === item.label ? 'active' : ''}`} onClick={() => openSection(item.label)}><Icon size={18}/><span>{item.label}</span>{section === item.label && <span className="nav-active-dot"/>}</button>; })}</nav><div className="sidebar-bottom"><div className="offline-status"><span className="status-dot"/><div><strong>Mode local</strong><small>Prêt à travailler hors ligne</small></div></div><button type="button" className="profile-button" onClick={onLock}><div className="avatar">{email.slice(0,1).toUpperCase()}</div><div className="profile-text"><strong>Mon espace</strong><small>{email}</small></div><LockKeyhole size={15} className="profile-lock"/></button></div></aside>
-    {mobileNav && <button type="button" aria-label="Fermer la navigation" className="mobile-backdrop" onClick={() => setMobileNav(false)}/>}
-    <main className="main-area"><header className="topbar"><button type="button" className="icon-button mobile-menu" aria-label="Ouvrir le menu" onClick={() => setMobileNav(true)}><Menu size={20}/></button><div className="breadcrumb"><span>Continuité</span><ChevronRight size={14}/><strong>{section}</strong></div><div className="topbar-actions"><label className="global-search"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Rechercher un film, personnage…"/><kbd>⌘ K</kbd></label><button type="button" className="icon-button help-button" title="Aide" aria-label="Ouvrir l’aide" onClick={() => setHelpOpen(true)}><CircleHelp size={18}/></button></div></header>
-      <div className="page-content"><div className="page-heading"><div><div className="eyebrow">VOTRE ATELIER NUMÉRIQUE</div><h1>{section === 'Accueil' ? 'Bonjour, bienvenue.' : section}</h1><p>{section === 'Accueil' ? 'Toute votre continuité coiffure et maquillage, au même endroit.' : current.detail}</p></div><button type="button" className="primary-button" onClick={() => openSection('Films')}><Plus size={17}/> Nouveau film</button></div>
-      {section === 'Accueil' ? <><div className="welcome-panel"><div className="welcome-copy"><div className="panel-label"><Sparkles size={14}/> VOTRE ESPACE EST PRÊT</div><h2>Le souci du détail,<br/><em>scène après scène.</em></h2><p>Centralisez les looks, les références et les notes de chaque personnage pour retrouver rapidement la bonne continuité sur le plateau.</p><button type="button" className="secondary-button" onClick={() => openSection('Films')}>Découvrir mes films <ChevronRight size={16}/></button></div><div className="welcome-art" aria-hidden="true"><div className="art-ring ring-one"/><div className="art-ring ring-two"/><div className="art-lens"><Aperture size={82} strokeWidth={0.8}/></div><div className="art-caption">CONTINUITÉ <span>·</span> 001</div></div></div>
-      <div className="section-title-row"><div><h2>Votre activité</h2><p>Les éléments enregistrés sur cet appareil</p></div><span className="local-chip"><Database size={13}/> Stockage local</span></div><div className="stats-grid"><Stat icon={Clapperboard} label="Films" count={counts.films} detail="Projets cinéma"/><Stat icon={Users} label="Personnages" count={counts.characters} detail="Fiches personnages"/><Stat icon={Film} label="Séquences" count={counts.sequences} detail="Scènes enregistrées"/><Stat icon={Camera} label="Photos" count={counts.photos} detail="Références de continuité"/></div><div className="quick-actions"><button type="button" className="quick-action" onClick={() => openSection('Films')}><span className="quick-action-icon"><Clapperboard size={20}/></span><span><strong>Films</strong><small>Films → personnages → séquences</small></span><ChevronRight size={17}/></button><button type="button" className="quick-action" onClick={() => openSection('Films')}><span className="quick-action-icon"><Camera size={20}/></span><span><strong>Caméra</strong><small>Ouvrez un film, un personnage puis une séquence</small></span><ChevronRight size={17}/></button><button type="button" className="quick-action" onClick={() => openSection('Mes photos', 'images')}><span className="quick-action-icon"><Image size={20}/></span><span><strong>Images</strong><small>Mes photos : gérer et classer</small></span><ChevronRight size={17}/></button></div>
-      <div className="bottom-grid"><section className="content-card next-card"><div className="card-heading"><div><h3>Pour commencer</h3><p>Préparez votre premier projet</p></div><span className="step-count">01 / 04</span></div><div className="check-row"><span className="check-icon"><Check size={15}/></span><div><strong>Espace local initialisé</strong><small>La base de données est prête sur cet appareil.</small></div><span className="done-label">Terminé</span></div><div className="check-row"><span className="step-number">02</span><div><strong>Créer votre premier film</strong><small>Ajoutez un projet pour organiser votre travail.</small></div><button type="button" className="round-arrow" onClick={() => openSection('Films')} aria-label="Créer un film"><ChevronRight size={17}/></button></div><div className="check-row"><span className="step-number">03</span><div><strong>Ajouter un personnage</strong><small>Associez les fiches aux projets.</small></div><button type="button" className="round-arrow" onClick={() => openSection('Personnages')} aria-label="Ajouter un personnage"><ChevronRight size={17}/></button></div><div className="check-row"><span className="step-number">04</span><div><strong>Préparer les références photo</strong><small>Coiffure, maquillage et notes de plateau.</small></div><button type="button" className="round-arrow" onClick={() => openSection('Mes photos', 'images')} aria-label="Ouvrir les images"><ChevronRight size={17}/></button></div></section><section className="content-card storage-card"><div className="card-heading"><div><h3>Vos données</h3><p>Stockées localement</p></div><div className="storage-icon"><Database size={20}/></div></div><div className="storage-illustration"><div className="storage-stack stack-back"/><div className="storage-stack stack-mid"/><div className="storage-stack stack-front"><FolderOpen size={25}/><span>LOCAL</span></div></div><div className="storage-note"><ShieldCheck size={16}/><span>Aucune photo n’est envoyée vers un serveur dans cette version de base.</span></div><button type="button" className="outline-button" onClick={() => openSection('Sauvegarde')}>Préparer une sauvegarde <ChevronRight size={15}/></button></section></div>
-      </> : <ProjectWorkspace section={section} query={query} onDataChanged={refreshCounts} continuityAction={continuityAction} />}
-      {helpOpen && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setHelpOpen(false); }}><section className="editor-modal" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="editor-heading"><div><div className="eyebrow">GUIDE RAPIDE</div><h2 id="help-title">Comment utiliser Continuité</h2></div><button type="button" className="icon-button" aria-label="Fermer l’aide" onClick={() => setHelpOpen(false)}><X size={18}/></button></div><div className="help-content"><p><strong>1. Films :</strong> créez un projet pour le tournage.</p><p><strong>2. Personnages :</strong> associez les personnages à un film.</p><p><strong>3. Séquences :</strong> créez les séquences de chaque personnage.</p><p><strong>4. Séquences :</strong> ouvrez une séquence pour voir ses photos ou prendre une nouvelle référence. La caméra ne s’ouvre pas avant cette étape.</p><p><strong>5. Photos :</strong> chaque photo est enregistrée dès la prise de vue. Touchez la miniature de la dernière photo pour l’ouvrir en plein écran : retour à la caméra, suppression, détails et classement (film, personnage, séquence). Les modifications sont enregistrées automatiquement.</p><p><strong>6. Mes photos :</strong> retrouvez toutes vos photos, filtrez par film, personnage ou séquence, puis ouvrez-les pour les classer ou les relire.</p><p><strong>Stockage :</strong> les données restent locales. Exportez régulièrement un fichier de sauvegarde et conservez-le séparément. Google Drive n’est pas encore connecté.</p></div><div className="editor-actions"><button type="button" className="primary-button" onClick={() => setHelpOpen(false)}>Compris</button></div></section></div>}
-      <footer className="page-footer"><span>CONTINUITÉ <span className="footer-sep">/</span> PHASE 1 — FONDATION</span><span><span className="status-dot"/> Base locale initialisée</span></footer></div></main></div>;
+  /** « Photographier » : ouvre la caméra sur la séquence indiquée, sinon sur la dernière utilisée. */
+  const startCamera = async (sequenceId?: string) => {
+    const target = sequenceId ?? (await getResumeSequence())?.id;
+    setMoreOpen(false); setQuery('');
+    if (!target) { setLaunch(null); setSection(counts.films === 0 ? 'Accueil' : 'Projets'); return; }
+    setLaunch({ sequenceId: target, nonce: Date.now() }); setSection('Projets');
+  };
+  const openPhoto = (photoId: string) => { setLaunch(null); setQuery(''); setPhotoToOpen({ id: photoId, nonce: Date.now() }); setSection('Mes photos'); };
+  const info = sectionInfo[section];
+  const navButton = (item: { label: Section; icon: typeof Film }) => { const Icon = item.icon; return <button type="button" key={item.label} className={`nav-item ${section === item.label ? 'active' : ''}`} onClick={() => openSection(item.label)}><Icon size={18}/><span>{sectionInfo[item.label].title}</span>{section === item.label && <span className="nav-active-dot"/>}</button>; };
+  const moreActive = moreNav.some(item => item.label === section);
+  return <div className="app-shell"><aside className="sidebar"><div className="sidebar-top"><Brand/></div>
+    <button type="button" className="sidebar-shoot" onClick={() => void startCamera()}><Camera size={19}/><span>Photographier</span></button>
+    <nav className="main-nav">{mainNav.map(navButton)}</nav>
+    <div className="workspace-label nav-more-label">PLUS</div><nav className="main-nav">{moreNav.map(navButton)}</nav>
+    <div className="sidebar-bottom"><div className="offline-status"><span className="status-dot"/><div><strong>Mode local</strong><small>Prêt à travailler hors ligne</small></div></div><button type="button" className="profile-button" onClick={onLock}><div className="avatar">{email.slice(0,1).toUpperCase()}</div><div className="profile-text"><strong>Mon espace</strong><small>{email}</small></div><LockKeyhole size={15} className="profile-lock"/></button></div></aside>
+    <main className="main-area"><header className="topbar"><div className="breadcrumb"><span className="breadcrumb-brand"><Aperture size={16}/> Continuité</span><ChevronRight size={14}/><strong>{info.title}</strong></div><div className="topbar-actions">{section !== 'Accueil' && <label className="global-search"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Rechercher…" aria-label="Rechercher"/></label>}<button type="button" className="icon-button help-button" title="Aide" aria-label="Ouvrir l’aide" onClick={() => setHelpOpen(true)}><CircleHelp size={18}/></button></div></header>
+      <div className="page-content">
+        {section === 'Accueil'
+          ? <Home key={homeKey} onOpenSection={openSection} onStartCamera={id => void startCamera(id)} onOpenPhoto={openPhoto} onDataChanged={refreshCounts}/>
+          : <><div className="page-heading"><div><h1>{info.title}</h1><p>{info.detail}</p></div></div>
+            <ProjectWorkspace section={section} query={query} onDataChanged={refreshCounts} launch={launch} onLaunchHandled={() => setLaunch(null)} openPhotoId={photoToOpen?.id} openPhotoNonce={photoToOpen?.nonce}/></>}
+      </div></main>
+    <nav className="bottom-nav" aria-label="Navigation principale">
+      <button type="button" className={section === 'Accueil' ? 'active' : ''} onClick={() => openSection('Accueil')}><HomeIcon size={22}/><span>Accueil</span></button>
+      <button type="button" className={section === 'Projets' ? 'active' : ''} onClick={() => openSection('Projets')}><Clapperboard size={22}/><span>Projets</span></button>
+      <button type="button" className="bottom-nav-camera" aria-label="Photographier" onClick={() => void startCamera()}><Camera size={26}/></button>
+      <button type="button" className={section === 'Mes photos' ? 'active' : ''} onClick={() => openSection('Mes photos')}><Image size={22}/><span>Mes photos</span></button>
+      <button type="button" className={moreActive || moreOpen ? 'active' : ''} onClick={() => setMoreOpen(true)}><MoreHorizontal size={22}/><span>Plus</span></button>
+    </nav>
+    {moreOpen && <div className="modal-backdrop more-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setMoreOpen(false); }}><section className="editor-modal more-sheet" role="dialog" aria-modal="true" aria-label="Plus"><div className="editor-heading"><div><div className="eyebrow">PLUS</div><h2>Autres outils</h2></div><button type="button" className="icon-button" aria-label="Fermer" onClick={() => setMoreOpen(false)}><X size={18}/></button></div>
+      <div className="more-list">{moreNav.map(item => { const Icon = item.icon; return <button type="button" key={item.label} className="more-item" onClick={() => openSection(item.label)}><Icon size={20}/><span>{sectionInfo[item.label].title}</span><ChevronRight size={16}/></button>; })}
+        <button type="button" className="more-item" onClick={() => { setMoreOpen(false); setHelpOpen(true); }}><CircleHelp size={20}/><span>Aide</span><ChevronRight size={16}/></button>
+        <button type="button" className="more-item" onClick={() => { setMoreOpen(false); onLock(); }}><LockKeyhole size={20}/><span>Verrouiller · {email}</span><ChevronRight size={16}/></button></div></section></div>}
+    {helpOpen && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setHelpOpen(false); }}><section className="editor-modal" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="editor-heading"><div><div className="eyebrow">GUIDE RAPIDE</div><h2 id="help-title">Comment utiliser Continuité</h2></div><button type="button" className="icon-button" aria-label="Fermer l’aide" onClick={() => setHelpOpen(false)}><X size={18}/></button></div><div className="help-content"><p><strong>Photographier :</strong> le grand bouton ouvre la caméra sur la dernière séquence utilisée. Chaque photo est enregistrée aussitôt; touchez la miniature pour l’ouvrir en plein écran.</p><p><strong>Plein écran :</strong> retour à la caméra, suppression, et « Détails » pour classer la photo (film, personnage, séquence) et ajouter notes, coiffure, maquillage. Tout s’enregistre automatiquement.</p><p><strong>Projets :</strong> film → personnage → séquence. Ouvrez une séquence pour voir ses photos ou photographier.</p><p><strong>Mes photos :</strong> toutes vos photos, avec filtres par film, personnage ou séquence.</p><p><strong>Sauvegarde :</strong> les données restent sur cet appareil. Exportez régulièrement un fichier de sauvegarde et conservez-le séparément. Google Drive n’est pas encore connecté.</p></div><div className="editor-actions"><button type="button" className="primary-button" onClick={() => setHelpOpen(false)}>Compris</button></div></section></div>}
+  </div>;
 }
 
-function Stat({ icon: Icon, label, count, detail }: { icon: typeof Film; label: string; count: number; detail: string }) { return <div className="stat-card"><div className="stat-top"><div className="stat-icon"><Icon size={18}/></div><span className="stat-count">{count.toString().padStart(2, '0')}</span></div><div className="stat-label">{label}</div><div className="stat-detail">{detail}</div></div>; }
 export default function App() {
   const [ready, setReady] = useState(false); const [profile, setProfile] = useState(false); const [unlocked, setUnlocked] = useState(false); const [email, setEmail] = useState('');
   useEffect(() => { (async () => { try { const exists = await hasLocalProfile(); setProfile(exists); if (exists) setEmail(await getProfileEmail()); else setUnlocked(true); } catch { setUnlocked(true); } finally { setReady(true); } })(); }, []);

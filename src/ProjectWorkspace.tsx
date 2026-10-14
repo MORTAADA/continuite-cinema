@@ -6,14 +6,14 @@ import { archiveCharacter, archiveFilm, archiveSequence, deleteCharacter, delete
 import BackupWorkspace from './BackupWorkspace';
 import ContinuityWorkspace from './ContinuityWorkspace';
 
-type Section = 'Films' | 'Personnages' | 'Séquences' | 'Mes photos' | 'Sauvegarde' | 'Paramètres';
+type Section = 'Projets' | 'Personnages' | 'Séquences' | 'Mes photos' | 'Sauvegarde' | 'Paramètres';
 type ContinuityAction = 'camera' | 'images' | undefined;
-type Props = { section: Section; query: string; onDataChanged: () => void; continuityAction?: ContinuityAction };
+type Props = { section: Section; query: string; onDataChanged: () => void; continuityAction?: ContinuityAction; launch?: { sequenceId: string; nonce: number } | null; onLaunchHandled?: () => void; openPhotoId?: string; openPhotoNonce?: number };
 type Editor = { kind: 'film' | 'character' | 'sequence'; id?: string } | null;
 
 type FilmBrowser = { filmId: string; characterId?: string } | null;
 
-export default function ProjectWorkspace({ section, query, onDataChanged, continuityAction }: Props) {
+export default function ProjectWorkspace({ section, query, onDataChanged, continuityAction, launch, onLaunchHandled, openPhotoId, openPhotoNonce }: Props) {
   const [films, setFilms] = useState<FilmRecord[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [sequences, setSequences] = useState<SequenceRecord[]>([]);
@@ -25,6 +25,7 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
   const [showArchived, setShowArchived] = useState(false);
   const [activeSequenceId, setActiveSequenceId] = useState<string | null>(null);
   const [sequenceFilmId, setSequenceFilmId] = useState('');
+  const [autoCamera, setAutoCamera] = useState(false);
   const [categoryImages, setCategoryImages] = useState<Record<string,string>>({});
 
   const refresh = async () => {
@@ -32,7 +33,12 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
     setFilms(f); setCharacters(c); setSequences(s);
   };
   useEffect(() => { void refresh().catch(() => setError('Impossible de lire la base locale.')); getSetting<Record<string,string>>('categoryImages').then(v => setCategoryImages(v ?? {})).catch(() => undefined); }, [section]);
-  useEffect(() => { if (section !== 'Films') { setBrowser(null); setActiveSequenceId(null); } setShowArchived(false); }, [section]);
+  useEffect(() => { if (section !== 'Projets') { setBrowser(null); setActiveSequenceId(null); } setShowArchived(false); }, [section]);
+
+  useEffect(() => {
+    if (!launch) return;
+    setBrowser(null); setActiveSequenceId(launch.sequenceId); setAutoCamera(true); onLaunchHandled?.();
+  }, [launch?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const normalizedQuery = query.trim().toLocaleLowerCase('fr');
   const visibleFilms = useMemo(() => films.filter(f => (showArchived ? !!f.archivedAt : !f.archivedAt) && `${f.title} ${f.description ?? ''}`.toLocaleLowerCase('fr').includes(normalizedQuery)), [films, normalizedQuery, showArchived]);
@@ -75,12 +81,12 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
   const film = editor?.kind === 'film' ? films.find(f => f.id === editor.id) : undefined;
   const character = editor?.kind === 'character' ? characters.find(c => c.id === editor.id) : undefined;
   const sequence = editor?.kind === 'sequence' ? sequences.find(s => s.id === editor.id) : undefined;
-  const createKind: 'film' | 'character' | 'sequence' = section === 'Films' ? (browser ? (browser.characterId ? 'sequence' : 'character') : 'film') : section === 'Personnages' ? 'character' : 'sequence';
+  const createKind: 'film' | 'character' | 'sequence' = section === 'Projets' ? (browser ? (browser.characterId ? 'sequence' : 'character') : 'film') : section === 'Personnages' ? 'character' : 'sequence';
   const canCreate = createKind === 'film' || (createKind === 'character' && films.some(f => !f.archivedAt)) || (createKind === 'sequence' && characters.some(c => !c.archivedAt && (!browser?.filmId || c.filmId === browser.filmId)));
   const createLabel = createKind === 'film' ? 'Nouveau film' : createKind === 'character' ? 'Nouveau personnage' : 'Nouvelle séquence';
 
-  if (section === 'Films' && activeSequenceId) return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} fixedSequenceId={activeSequenceId} onBack={() => setActiveSequenceId(null)} />;
-  if (section === 'Mes photos') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} initialAction={continuityAction} />;
+  if (section === 'Projets' && activeSequenceId) return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} fixedSequenceId={activeSequenceId} initialAction={autoCamera ? 'camera' : undefined} onBack={() => { setActiveSequenceId(null); setAutoCamera(false); }} />;
+  if (section === 'Mes photos') return <ContinuityWorkspace query={query} onDataChanged={onDataChanged} initialAction={continuityAction} openPhotoId={openPhotoId} openPhotoNonce={openPhotoNonce} />;
   if (section === 'Sauvegarde') return <BackupWorkspace onDataChanged={onDataChanged} />;
 
   if (section === 'Paramètres') return <ImageSettings />;
@@ -94,24 +100,24 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
     <div className="workspace-toolbar">
       <div>
         <div className="eyebrow">GESTION DES PROJETS</div>
-        <p>{section === 'Films' ? (browser ? (selectedCharacter ? `Séquences de ${selectedCharacter.name}` : `Personnages de ${selectedFilm?.title ?? 'ce film'}`) : `${films.length} film(s) enregistré(s)`) : section === 'Personnages' ? `${characters.length} personnage(s) enregistré(s)` : `${sequences.length} séquence(s) enregistrée(s)`}</p>
+        <p>{section === 'Projets' ? (browser ? (selectedCharacter ? `Séquences de ${selectedCharacter.name}` : `Personnages de ${selectedFilm?.title ?? 'ce film'}`) : `${films.length} film(s) enregistré(s)`) : section === 'Personnages' ? `${characters.length} personnage(s) enregistré(s)` : `${sequences.length} séquence(s) enregistrée(s)`}</p>
       </div>
       <div className="toolbar-actions">
-        {(['Films','Personnages','Séquences'].includes(section) && !(section === 'Films' && browser)) && <button type="button" className="outline-button compact-button" onClick={() => setShowArchived(v => !v)}><Archive size={15}/>{showArchived ? 'Voir les éléments actifs' : 'Voir les archives'}</button>}
-        {section === 'Films' && browser && <button type="button" className="outline-button compact-button" onClick={() => setBrowser(browser.characterId ? { filmId: browser.filmId } : null)}><ArrowLeft size={15}/> Retour</button>}
+        {(['Projets','Personnages','Séquences'].includes(section) && !(section === 'Projets' && browser)) && <button type="button" className="outline-button compact-button" onClick={() => setShowArchived(v => !v)}><Archive size={15}/>{showArchived ? 'Voir les éléments actifs' : 'Voir les archives'}</button>}
+        {section === 'Projets' && browser && <button type="button" className="outline-button compact-button" onClick={() => setBrowser(browser.characterId ? { filmId: browser.filmId } : null)}><ArrowLeft size={15}/> Retour</button>}
         {canCreate && <button type="button" className="primary-button" onClick={() => { setError(''); if (createKind === 'sequence') setSequenceFilmId(browser?.filmId ?? characters.find(c => !c.archivedAt)?.filmId ?? films.find(f => !f.archivedAt)?.id ?? ''); setEditor({ kind: createKind }); }}><Plus size={17}/>{createLabel}</button>}
       </div>
     </div>
     {notice && <div className="workspace-notice">{notice}</div>}{error && <div className="form-error">{error}</div>}
 
-    {section === 'Films' && !browser && <div className="record-grid">
+    {section === 'Projets' && !browser && <div className="record-grid">
       {visibleFilms.map(item => <article className="record-card record-card-clickable" key={item.id} onClick={() => setBrowser({ filmId: item.id })} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setBrowser({ filmId: item.id }); }} role="button" tabIndex={0}>
         <RecordImage src={item.imageDataUrl ?? categoryImages.films} fallback={<Clapperboard size={20}/>} /><div className="record-main"><h3>{item.title}</h3><p>{item.description || 'Aucune description pour le moment.'}</p><small>{characters.filter(c => c.filmId === item.id).length} personnage(s) · {sequences.filter(s => s.filmId === item.id).length} séquence(s)</small></div>
         <div className="record-actions"><button type="button" className="icon-button" title="Modifier" onClick={e => { e.stopPropagation(); setEditor({kind:'film',id:item.id}); }}><Pencil size={15}/></button>{item.archivedAt ? <><button type="button" className="icon-button" title="Restaurer" onClick={e => { e.stopPropagation(); void restore('film',item.id); }}><RotateCcw size={15}/></button><button type="button" className="icon-button danger-button" title="Supprimer définitivement" onClick={e => { e.stopPropagation(); void remove('film',item.id,item.title); }}><Trash2 size={15}/></button></> : <button type="button" className="icon-button" title="Archiver" onClick={e => { e.stopPropagation(); void archive('film',item.id,item.title); }}><Archive size={15}/></button>}</div>
       </article>)}
       {visibleFilms.length === 0 && <Empty title={normalizedQuery ? 'Aucun résultat' : 'Votre premier film vous attend'} body={normalizedQuery ? 'Essayez un autre terme de recherche.' : 'Créez un film pour commencer à organiser les personnages, les séquences et les photos de continuité.'}/>}</div>}
 
-    {section === 'Films' && browser && !selectedCharacter && <div className="record-grid">
+    {section === 'Projets' && browser && !selectedCharacter && <div className="record-grid">
       {browserCharacters.map(item => <article className="record-card record-card-clickable" key={item.id} onClick={() => setBrowser({ filmId: browser.filmId, characterId: item.id })} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setBrowser({ filmId: browser.filmId, characterId: item.id }); }} role="button" tabIndex={0}>
         <RecordImage src={item.imageDataUrl ?? categoryImages.characters} fallback={<Users size={20}/>} /><div className="record-main"><h3>{item.name}</h3><p>{item.actorName ? `Interprété par ${item.actorName}` : 'Acteur non renseigné'}</p><small>{selectedFilm?.title} · {sequences.filter(s => (s.characterIds ?? [s.characterId]).includes(item.id) && !s.archivedAt).length} séquence(s)</small>{item.notes && <p className="record-notes">{item.notes}</p>}</div>
         <div className="record-actions"><button type="button" className="icon-button" title="Modifier" onClick={e => { e.stopPropagation(); setEditor({kind:'character',id:item.id}); }}><Pencil size={15}/></button></div>
@@ -119,7 +125,7 @@ export default function ProjectWorkspace({ section, query, onDataChanged, contin
       {browserCharacters.length === 0 && <Empty title="Aucun personnage" body="Ajoutez un personnage à ce film pour continuer vers ses séquences."/>}
     </div>}
 
-    {section === 'Films' && browser && selectedCharacter && <div className="record-grid">
+    {section === 'Projets' && browser && selectedCharacter && <div className="record-grid">
       {browserSequences.map(item => <article className="record-card" key={item.id}><RecordImage src={item.imageDataUrl ?? categoryImages.sequences} fallback={<Film size={20}/>} /><div className="record-main"><h3>{item.sequenceNumber ? `${item.sequenceNumber} — ` : ''}{item.name}</h3><p>{item.description || 'Aucune note pour cette séquence.'}</p><small>{selectedFilm?.title} · {selectedCharacter.name}</small><button type="button" className="text-button open-sequence-button" onClick={() => setActiveSequenceId(item.id)}>Ouvrir les photos et la caméra →</button></div><div className="record-actions"><button type="button" className="icon-button" title="Modifier" onClick={() => { setSequenceFilmId(item.filmId); setEditor({kind:'sequence',id:item.id}); }}><Pencil size={15}/></button>{item.archivedAt ? <><button type="button" className="icon-button" title="Restaurer" onClick={() => void restore('sequence',item.id)}><RotateCcw size={15}/></button><button type="button" className="icon-button danger-button" title="Supprimer définitivement" onClick={() => void remove('sequence',item.id,item.name)}><Trash2 size={15}/></button></> : <button type="button" className="icon-button" title="Archiver" onClick={() => void archive('sequence',item.id,item.name)}><Archive size={15}/></button>}</div></article>)}
       {browserSequences.length === 0 && <Empty title="Aucune séquence" body="Ajoutez une séquence à ce personnage pour continuer vers les photos de continuité."/>}
     </div>}
@@ -149,6 +155,6 @@ function ImageSettings() {
   useEffect(() => { getSetting<Record<string,string>>('categoryImages').then(v => setImages(v ?? {})).catch(() => setMessage('Impossible de charger les images.')); }, []);
   async function choose(key: string, file?: File) { if (!file) return; if (!file.type.startsWith('image/')) { setMessage('Choisissez un fichier image.'); return; } if (file.size > 2*1024*1024) { setMessage('Chaque image doit faire 2 Mo maximum.'); return; } const reader = new FileReader(); reader.onload = async () => { const next = {...images, [key]: String(reader.result)}; try { await setSetting('categoryImages', next); setImages(next); setMessage('Images enregistrées sur cet appareil.'); } catch { setMessage('Enregistrement impossible. Essayez une image plus légère.'); } }; reader.readAsDataURL(file); }
   async function remove(key: string) { const next = {...images}; delete next[key]; await setSetting('categoryImages', next); setImages(next); setMessage('Image supprimée. L’icône d’origine sera utilisée.'); }
-  return <div className="workspace-stack"><div className="workspace-toolbar"><div><div className="eyebrow">PERSONNALISATION VISUELLE</div><p>Choisissez les images générales des catégories. Elles sont enregistrées sur cet appareil.</p></div></div><div className="image-settings-grid">{[{key:'films',label:'Films'},{key:'characters',label:'Personnages'},{key:'sequences',label:'Séquences'}].map(item => <section className="content-card image-setting-card" key={item.key}><h3>{item.label}</h3>{images[item.key] ? <img className="category-image-preview" src={images[item.key]} alt={'Image de catégorie '+item.label}/> : <div className="category-image-placeholder">Icône d’origine</div>}<label className="primary-button file-import-button">Choisir une image<input type="file" accept="image/*" onChange={e => void choose(item.key,e.target.files?.[0])}/></label>{images[item.key] && <button className="outline-button" type="button" onClick={() => void remove(item.key)}>Revenir à l’icône</button>}</section>)}</div>{message && <p className="workspace-notice">{message}</p>}<p className="field-hint">Pour les images individuelles, ouvrez un film, un personnage ou une séquence et utilisez le champ « Image personnalisée ». Formats image courants, 2 Mo maximum par image.</p></div>;
+  return <div className="workspace-stack"><div className="workspace-toolbar"><div><div className="eyebrow">PERSONNALISATION VISUELLE</div><p>Choisissez les images générales des catégories. Elles sont enregistrées sur cet appareil.</p></div></div><div className="image-settings-grid">{[{key:'films',label:'Projets'},{key:'characters',label:'Personnages'},{key:'sequences',label:'Séquences'}].map(item => <section className="content-card image-setting-card" key={item.key}><h3>{item.label}</h3>{images[item.key] ? <img className="category-image-preview" src={images[item.key]} alt={'Image de catégorie '+item.label}/> : <div className="category-image-placeholder">Icône d’origine</div>}<label className="primary-button file-import-button">Choisir une image<input type="file" accept="image/*" onChange={e => void choose(item.key,e.target.files?.[0])}/></label>{images[item.key] && <button className="outline-button" type="button" onClick={() => void remove(item.key)}>Revenir à l’icône</button>}</section>)}</div>{message && <p className="workspace-notice">{message}</p>}<p className="field-hint">Pour les images individuelles, ouvrez un film, un personnage ou une séquence et utilisez le champ « Image personnalisée ». Formats image courants, 2 Mo maximum par image.</p></div>;
 }
 function Empty({ title, body }: { title: string; body: string }) { return <div className="workspace-empty"><div className="placeholder-icon"><Search size={25}/></div><h2>{title}</h2><p>{body}</p></div>; }

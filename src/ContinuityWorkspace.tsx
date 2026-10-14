@@ -4,17 +4,19 @@ import type { FilmRecord, CharacterRecord, SequenceRecord, PhotoRecord } from '.
 import { getDatabase } from './lib/db';
 import { archivePhoto, deletePhoto, listPhotos, restorePhoto, savePhoto } from './lib/photos';
 import PhotoViewer from './PhotoViewer';
+import { rememberSequence } from './lib/resume';
 
-type Props = { query: string; onDataChanged: () => void; initialAction?: 'camera' | 'images'; fixedSequenceId?: string; onBack?: () => void };
+type Props = { query: string; onDataChanged: () => void; initialAction?: 'camera' | 'images'; fixedSequenceId?: string; onBack?: () => void; openPhotoId?: string; openPhotoNonce?: number };
 type ViewerState = { ids: string[]; id: string; from: 'camera' | 'list'; details: boolean } | null;
 const linkedIds = (sequence: SequenceRecord) => (sequence.characterIds?.length ? sequence.characterIds : [sequence.characterId]);
 
-export default function ContinuityWorkspace({ query, onDataChanged, initialAction, fixedSequenceId, onBack }: Props) {
+export default function ContinuityWorkspace({ query, onDataChanged, initialAction, fixedSequenceId, onBack, openPhotoId, openPhotoNonce }: Props) {
   const [films, setFilms] = useState<FilmRecord[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [sequences, setSequences] = useState<SequenceRecord[]>([]);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [sequenceId, setSequenceId] = useState('');
+  const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -38,12 +40,14 @@ export default function ContinuityWorkspace({ query, onDataChanged, initialActio
   const refresh = async () => {
     const db = await getDatabase();
     const [f, c, s, p] = await Promise.all([db.getAll('films'), db.getAll('characters'), db.getAll('sequences'), listPhotos()]);
-    setFilms(f); setCharacters(c); setSequences(s); setPhotos(p);
+    setFilms(f); setCharacters(c); setSequences(s); setPhotos(p); setLoaded(true);
     setSequenceId(current => fixedSequenceId && s.some(item => item.id === fixedSequenceId && !item.archivedAt) ? fixedSequenceId : s.some(item => item.id === current && !item.archivedAt) ? current : (s.find(item => !item.archivedAt)?.id ?? ''));
   };
+  useEffect(() => { if (fixedSequenceId) void rememberSequence(fixedSequenceId); }, [fixedSequenceId]);
   useEffect(() => { void refresh().catch(() => setError('Impossible de lire les données locales.')); }, [fixedSequenceId]);
 
   useEffect(() => {
+    if (!loaded) return;
     if (initialAction === 'camera') {
       setShowForm(false);
       if (sequences.some(item => !item.archivedAt)) {
@@ -55,7 +59,16 @@ export default function ContinuityWorkspace({ query, onDataChanged, initialActio
     } else if (initialAction === 'images') {
       setShowForm(false);
     }
-  }, [initialAction, sequences.length]);
+  }, [initialAction, sequences.length, loaded]);
+
+  // Ouverture directe d'une photo (touche sur une miniature de l'accueil).
+  const openedPhotoNonce = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!loaded || !openPhotoId || openedPhotoNonce.current === openPhotoNonce) return;
+    const target = photos.find(p => p.id === openPhotoId);
+    openedPhotoNonce.current = openPhotoNonce;
+    if (target) setViewer({ ids: photos.filter(p => !p.archivedAt).map(p => p.id), id: target.id, from: 'list', details: false });
+  }, [loaded, openPhotoId, openPhotoNonce, photos]);
 
   useEffect(() => {
     if (!cameraOpen) return;
@@ -231,6 +244,7 @@ function LastShotThumbnail({ photo, count, onClick }: { photo: PhotoRecord; coun
 
 function PhotoCard({ photo, sequence, characterLabel, film, isArchived, onArchive, onRestore, onDelete, onEdit, onOpen }: { photo: PhotoRecord; sequence?: SequenceRecord; characterLabel: string; film?: FilmRecord; isArchived: boolean; onArchive: () => void; onRestore: () => void; onDelete: () => void; onEdit: () => void; onOpen: () => void }) {
   const [url, setUrl] = useState('');
-  useEffect(() => { const objectUrl = URL.createObjectURL(photo.imageBlob); setUrl(objectUrl); return () => URL.revokeObjectURL(objectUrl); }, [photo.imageBlob]);
+  // La liste utilise la miniature (rapide) ; l'image originale s'ouvre en plein écran.
+  useEffect(() => { const objectUrl = URL.createObjectURL(photo.thumbnailBlob ?? photo.imageBlob); setUrl(objectUrl); return () => URL.revokeObjectURL(objectUrl); }, [photo.imageBlob, photo.thumbnailBlob]);
   return <article className="photo-card"><div className="photo-image-wrap">{isArchived && <span className="photo-archived-label">ARCHIVÉE</span>}{url && <button type="button" className="photo-open" onClick={onOpen} aria-label={`Ouvrir la photo en plein écran — ${sequence?.name ?? ''}`}><img className="photo-image" src={url} alt={`Référence ${sequence?.name ?? ''}`} loading="lazy"/></button>}<div className="photo-actions">{!isArchived && <><button type="button" className="icon-button" title="Modifier les détails" aria-label="Modifier les détails" onClick={onEdit}><Pencil size={16}/></button><button type="button" className="icon-button" title="Archiver la photo" aria-label="Archiver la photo" onClick={onArchive}><Archive size={16}/></button></>}{isArchived && <><button type="button" className="icon-button" title="Restaurer la photo" aria-label="Restaurer la photo" onClick={onRestore}><RotateCcw size={16}/></button><button type="button" className="icon-button danger-button" title="Supprimer définitivement la photo" aria-label="Supprimer la photo" onClick={onDelete}><Trash2 size={16}/></button></>}</div></div><div className="photo-card-body"><div className="photo-date">{new Date(photo.capturedAt).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'})}</div><h3>{sequence?.sequenceNumber ? `${sequence.sequenceNumber} — ` : ''}{sequence?.name ?? 'Séquence inconnue'}</h3><p className="photo-context">{film?.title ?? 'Film'} · {characterLabel || 'Personnage'}</p>{photo.hairDetails?.details && <p><strong>Coiffure :</strong> {photo.hairDetails.details}</p>}{photo.makeupDetails?.details && <p><strong>Maquillage :</strong> {photo.makeupDetails.details}</p>}{photo.accessories && <p><strong>Accessoires :</strong> {photo.accessories}</p>}{photo.notes && <p className="photo-notes">{photo.notes}</p>}</div></article>;
 }
