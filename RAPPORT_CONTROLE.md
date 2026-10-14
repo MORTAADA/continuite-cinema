@@ -51,3 +51,19 @@ Création film/personnages/séquences ; 3 prises de vue ; compteur ; aperçu ple
 ### Limites — à refaire sur votre machine
 - `npm ci` était bloqué dans cet environnement (registre npm refusé par la politique réseau). Les tests ont utilisé esbuild + React 19 avec de petites doublures pour `idb` et `lucide-react`. Le projet cible React 18.3 : exécutez `npm ci && npm run build` pour la validation TypeScript complète (une vérification approchée a confirmé l’absence de variables inutilisées/indéfinies).
 - Caméra physique Android/iOS, flash, PWA hors ligne et grandes photothèques non testés.
+
+
+## Révision 0.4.0 — accueil simplifié et navigation
+- Accueil : carte « Reprendre » + grand bouton Photographier, 3 boutons (Projets, Mes photos, Sauvegarde avec alerte ≥ 7 jours ou aucune copie), 6 dernières photos (touche → aperçu plein écran). Premier lancement : formulaire unique film/personnage/séquence puis caméra.
+- Navigation : Accueil · Projets · Mes photos (+ Plus : Sauvegarde, Paramètres, listes complètes Personnages/Séquences, Aide, Verrouiller). Barre basse avec bouton caméra sur téléphone ; menu latéral avec bouton Photographier sur ordinateur.
+- Des fichiers de l’accueil existaient déjà dans le dossier dans deux versions incompatibles (props et classes CSS différentes) ; ils ont été unifiés (`Home.tsx`, `lib/home.ts`, `lib/resume.ts`).
+- Tests Chromium (390×800 et 1280×800, caméra simulée) : formulaire de premier lancement → caméra, Reprendre, Photographier direct, miniature → plein écran, boutons Projets/Mes photos/Sauvegarde, feuille Plus, sidebar/barre basse selon l’écran : tous réussis, aucune erreur JS.
+- Non fait : bouton « + Nouvelle séquence » depuis la caméra. Même limite qu’avant : `npm run build` complet et tests sur vrais téléphones à faire chez vous.
+
+
+## Révision 0.6.0 — protection des données et rapidité
+- Photo fantôme (0.5.0) retirée à la demande du client : le code et le CSS associés ont été supprimés.
+- Miniatures : `makeThumbnail` à chaque `savePhoto` ; `backfillThumbnails` (lecture + écriture dans une même transaction, une photo à la fois) pour les photos existantes ; listes « Mes photos », accueil et caméra utilisent la miniature.
+- Sauvegarde : état + alerte ≥ 7 jours / aucune copie ; partage natif (`navigator.share` avec fichier) avec repli téléchargement ; `rememberBackup` seulement après succès (pas si l’utilisateur annule) ; `navigator.storage.persist()` demandé au lancement (silencieux).
+- Tests Chromium (390×800, caméra simulée, partage simulé) : miniature JPEG créée (≈ 3 Ko pour 35 Ko), anciennes photos complétées avec notes conservées, statut de sauvegarde, partage appelé avec un fichier `.ccbackup`, téléchargement, restauration avec miniatures intactes ; régression accueil/navigation mobile et bureau : réussie, aucune erreur JS.
+- Non vérifié : le partage de fichier `.ccbackup` (type `application/octet-stream`) dépend du navigateur — Chrome Android peut refuser certains types ; dans ce cas le bouton Télécharger reste disponible. À confirmer sur Android et iPhone (voir `TESTS_TELEPHONE.md`). `npm run build` complet non exécuté ici (registre npm bloqué).
