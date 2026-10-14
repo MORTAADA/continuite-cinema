@@ -1,4 +1,4 @@
-import { getDatabase, type FilmRecord, type CharacterRecord, type SequenceRecord, type PhotoRecord } from './db';
+import { getDatabase, setSetting, type FilmRecord, type CharacterRecord, type SequenceRecord, type PhotoRecord } from './db';
 
 const MAGIC = 'CCINEMA1';
 const BACKUP_FORMAT = 'continuite-cinema-backup';
@@ -22,7 +22,9 @@ export async function exportBackup(): Promise<Blob> {
   const length = new Uint8Array(4); new DataView(length.buffer).setUint32(0, manifestBytes.byteLength, true);
   const parts: BlobPart[] = [MAGIC, length, manifestBytes];
   for (const photo of photos) { parts.push(photo.imageBlob); if (photo.thumbnailBlob) parts.push(photo.thumbnailBlob); }
-  return new Blob(parts, { type: 'application/octet-stream' });
+  const blob = new Blob(parts, { type: 'application/octet-stream' });
+  try { await setSetting('lastBackupAt', new Date().toISOString()); } catch { /* non bloquant */ }
+  return blob;
 }
 
 export async function restoreBackup(file: File): Promise<{ films: number; characters: number; sequences: number; photos: number }> {
