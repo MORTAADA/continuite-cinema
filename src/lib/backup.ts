@@ -1,3 +1,4 @@
+import { SECURITY_SETTING_KEYS } from './lock';
 import { getDatabase, setSetting, type FilmRecord, type CharacterRecord, type SequenceRecord, type PhotoRecord } from './db';
 
 const MAGIC = 'CCINEMA1';
@@ -12,11 +13,13 @@ export async function exportBackup(): Promise<Blob> {
   const [films, characters, sequences, photos, settings] = await Promise.all([
     db.getAll('films'), db.getAll('characters'), db.getAll('sequences'), db.getAll('photos'), db.getAll('settings'),
   ]);
+  // Le code local, son empreinte et le code de récupération ne sortent jamais de l'appareil.
+  const exportedSettings = settings.filter(item => !SECURITY_SETTING_KEYS.has(item.key));
   const photoManifest: PhotoManifest[] = photos.map(({ imageBlob, thumbnailBlob, ...record }) => ({
     record, imageSize: imageBlob.size, imageType: imageBlob.type || 'application/octet-stream',
     thumbnailSize: thumbnailBlob?.size ?? 0, thumbnailType: thumbnailBlob?.type || 'application/octet-stream',
   }));
-  const manifest: BackupManifest = { format: BACKUP_FORMAT, version: BACKUP_VERSION, createdAt: new Date().toISOString(), films, characters, sequences, photos: photoManifest, settings };
+  const manifest: BackupManifest = { format: BACKUP_FORMAT, version: BACKUP_VERSION, createdAt: new Date().toISOString(), films, characters, sequences, photos: photoManifest, settings: exportedSettings };
   const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest));
   if (manifestBytes.byteLength > 0xffffffff) throw new Error('Les métadonnées de cette sauvegarde sont trop volumineuses.');
   const length = new Uint8Array(4); new DataView(length.buffer).setUint32(0, manifestBytes.byteLength, true);
@@ -60,12 +63,15 @@ export async function restoreBackup(file: File): Promise<{ films: number; charac
   }
   if (offset !== file.size) throw new Error('Le fichier contient des données supplémentaires ou une taille incohérente. Les données actuelles n’ont pas été modifiées.');
   const db = await getDatabase(); const tx = db.transaction(['films', 'characters', 'sequences', 'photos', 'settings'], 'readwrite');
-  await Promise.all([tx.objectStore('films').clear(), tx.objectStore('characters').clear(), tx.objectStore('sequences').clear(), tx.objectStore('photos').clear(), tx.objectStore('settings').clear()]);
+  await Promise.all([tx.objectStore('films').clear(), tx.objectStore('characters').clear(), tx.objectStore('sequences').clear(), tx.objectStore('photos').clear()]);
+  // Les réglages de sécurité de CET appareil (code local, récupération) sont conservés ; seuls les autres réglages sont remplacés.
+  const settingsStore = tx.objectStore('settings');
+  for (const key of await settingsStore.getAllKeys()) if (!SECURITY_SETTING_KEYS.has(String(key))) await settingsStore.delete(key);
   for (const x of films) await tx.objectStore('films').put(x);
   for (const x of characters) await tx.objectStore('characters').put(x);
   for (const x of sequences) await tx.objectStore('sequences').put({ ...x, characterIds: x.characterIds?.length ? x.characterIds : [x.characterId] });
   for (const x of photos) await tx.objectStore('photos').put(x);
-  for (const x of settings) await tx.objectStore('settings').put(x);
+  for (const x of settings) if (!SECURITY_SETTING_KEYS.has(x.key)) await settingsStore.put(x);
   await tx.done;
   return { films: films.length, characters: characters.length, sequences: sequences.length, photos: photos.length };
 }
