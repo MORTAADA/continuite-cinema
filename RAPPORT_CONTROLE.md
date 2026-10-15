@@ -67,3 +67,27 @@ Création film/personnages/séquences ; 3 prises de vue ; compteur ; aperçu ple
 - Sauvegarde : état + alerte ≥ 7 jours / aucune copie ; partage natif (`navigator.share` avec fichier) avec repli téléchargement ; `rememberBackup` seulement après succès (pas si l’utilisateur annule) ; `navigator.storage.persist()` demandé au lancement (silencieux).
 - Tests Chromium (390×800, caméra simulée, partage simulé) : miniature JPEG créée (≈ 3 Ko pour 35 Ko), anciennes photos complétées avec notes conservées, statut de sauvegarde, partage appelé avec un fichier `.ccbackup`, téléchargement, restauration avec miniatures intactes ; régression accueil/navigation mobile et bureau : réussie, aucune erreur JS.
 - Non vérifié : le partage de fichier `.ccbackup` (type `application/octet-stream`) dépend du navigateur — Chrome Android peut refuser certains types ; dans ce cas le bouton Télécharger reste disponible. À confirmer sur Android et iPhone (voir `TESTS_TELEPHONE.md`). `npm run build` complet non exécuté ici (registre npm bloqué).
+
+
+## Révision 0.7.0 — version de livraison (sécurité, installation, performances)
+
+### Changements
+- **Installation (PWA)** : `id`, `start_url`, `scope`, icônes et lien du manifest en chemins absolus `/continuite-cinema/` (la mention « Impossible d'installer cette appli » venait d'un manifest en chemins relatifs). Icône `apple-touch-icon.png` 180×180 pour iPhone.
+- **Verrouillage** : l'accès reste fermé si la base locale est illisible (avant : déverrouillage par défaut). Verrouillage automatique après 2 min en arrière-plan. Limitation des essais persistée (5 essais, puis pause 30 s doublant jusqu'à 15 min). Empreinte du code passée en PBKDF2-SHA-256 (150 000 itérations) avec mise à niveau automatique des anciens profils.
+- **Code de récupération** : généré à la création du profil (80 bits, affiché une seule fois), utilisable via « Code oublié ? », renouvelable dans Sauvegarde → Sécurité. Changement du code local possible depuis l'application.
+- **Sauvegardes** : les réglages de sécurité (empreinte du code, sel, code de récupération) ne sont plus exportés et ne sont jamais écrasés par une restauration. Les anciens fichiers `.ccbackup` restent lisibles (leurs champs de sécurité sont ignorés).
+- **Texte d'inscription** : suppression de la mention d'une vérification par e-mail « avant la livraison » ; explication claire (code local, pas de compte, pas de récupération par e-mail).
+- **Mes photos** : affichage par pages de 24 avec « Afficher plus » (évite de créer des centaines de miniatures d'un coup).
+- **Service worker** : pré-chargement de tous les fichiers du build (usage hors ligne dès la première ouverture), nom de cache renouvelé automatiquement à chaque build (plugin dans `vite.config.ts`), réseau d'abord pour manifest/icônes.
+- **iPhone** : bandeau d'aide à l'installation sur l'écran d'accueil quand l'application est ouverte dans Safari (protection contre l'effacement automatique des données).
+- Ajout de `GUIDE_CLIENT.md`.
+
+### Contrôles effectués ici
+- Test automatisé (Node 22, WebCrypto réel, stockage simulé) de la logique de verrouillage : bon/mauvais code, pause après 5 échecs et doublement, refus du bon code pendant la pause, changement de code, récupération (casse/espaces tolérés), invalidation de l'ancien code de récupération, migration d'un ancien profil SHA-256 : 20 contrôles réussis.
+- Test du plugin de pré-chargement sur un dossier `dist` simulé : liste correcte, `.map` et `index.html` exclus, syntaxe du service worker produit valide, échec explicite si les marqueurs manquent.
+- Vérification TypeScript approchée avec déclarations simplifiées (options du projet : strict, noUnusedLocals, verbatimModuleSyntax) : aucun identifiant inutilisé, indéfini ou import de type mal formé.
+
+### Non réalisé — à faire avant la remise au client
+- `npm ci && npm run build` (registre npm inaccessible ici) : le typage réel React/idb n'a pas été vérifié ; le build GitHub Actions le fera et échouera en cas d'erreur.
+- Aucun test sur navigateur ni sur appareil réel : écrans de verrouillage / récupération, bandeau iOS, installation sur Android et iPhone, caméra, hors ligne, restauration d'une ancienne sauvegarde.
+- Le code est un verrou d'interface : les photos restent non chiffrées dans IndexedDB.

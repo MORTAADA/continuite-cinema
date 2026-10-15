@@ -54,3 +54,7 @@ L’application est une PWA : une fois publiée en **HTTPS**, elle s’installe 
 3. iPhone (Safari) : ouvrez l’adresse → bouton Partager → **Sur l’écran d’accueil**.
 4. Ouvrez l’application une fois avec Internet, puis elle fonctionne hors ligne. Autorisez la caméra à la première prise de vue.
 Les données restent dans le téléphone : exportez régulièrement une sauvegarde `.ccbackup`.
+
+
+## Version 0.7.0 — livraison
+Voir `GUIDE_CLIENT.md` (utilisation, installation Android/iPhone, sauvegarde) et la section « Révision 0.7.0 » de `RAPPORT_CONTROLE.md`. Le déploiement GitHub Pages utilise `base: /continuite-cinema/` ; si le dépôt est renommé, modifiez `vite.config.ts` **et** `public/manifest.webmanifest` ainsi que le lien du manifest dans `index.html`.
