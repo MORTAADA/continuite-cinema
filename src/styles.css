@@ -224,3 +224,16 @@
 .backup-status{display:flex;flex-direction:column;gap:5px;padding:14px 16px;border:1px solid #384438;border-radius:10px;background:#1a211b;color:#b3c5b2;margin:16px 0}
 .backup-status strong{font-size:13px;color:#d7e6d4}.backup-status span{font-size:11px;line-height:1.6}
 .backup-status.is-late{border-color:#7a5a32;background:#241d14;color:#d9b88c}.backup-status.is-late strong{color:#f0c993}
+
+/* --- Sécurité, récupération, installation iOS (v9) --- */
+.recovery-notice { display: grid; gap: 14px; }
+.recovery-notice h2 { margin: 0; }
+.recovery-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: clamp(1.15rem, 5.2vw, 1.6rem); letter-spacing: .12em; text-align: center; padding: 18px 12px; border: 1px dashed var(--accent); border-radius: 14px; background: rgba(255,255,255,.04); word-break: break-all; user-select: all; }
+.recovery-actions { display: flex; justify-content: center; }
+.lock-extra { display: grid; gap: 10px; margin-top: 12px; }
+.lock-extra .text-button { justify-self: center; }
+.install-hint { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 12px 14px; border: 1px solid rgba(184,155,98,.45); border-radius: 14px; background: rgba(184,155,98,.1); font-size: .88rem; line-height: 1.4; }
+.install-hint > svg { flex: none; margin-top: 2px; }
+.install-hint > span { flex: 1; }
+.load-more { display: flex; justify-content: center; margin: 18px 0 6px; }
+.security-panel .setup-form { margin-top: 14px; }
